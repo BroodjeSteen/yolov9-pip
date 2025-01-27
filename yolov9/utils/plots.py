@@ -13,19 +13,10 @@ import pandas as pd
 import seaborn as sn
 import torch
 from PIL import Image, ImageDraw, ImageFont
+
 from utils import TryExcept, threaded
-from utils.general import (
-    CONFIG_DIR,
-    FONT,
-    LOGGER,
-    check_font,
-    check_requirements,
-    clip_boxes,
-    increment_path,
-    is_ascii,
-    xywh2xyxy,
-    xyxy2xywh,
-)
+from utils.general import (CONFIG_DIR, FONT, LOGGER, check_font, check_requirements, clip_boxes, increment_path,
+                           is_ascii, xywh2xyxy, xyxy2xywh)
 from utils.metrics import fitness
 from utils.segment.general import scale_image
 
@@ -39,10 +30,8 @@ class Colors:
     # Ultralytics color palette https://ultralytics.com/
     def __init__(self):
         # hex = matplotlib.colors.TABLEAU_COLORS.values()
-        hexs = (
-            'FF3838', 'FF9D97', 'FF701F', 'FFB21D', 'CFD231', '48F90A', '92CC17', '3DDB86', '1A9334',
-            '00D4BB', '2C99A8', '00C2FF', '344593', '6473FF', '0018EC', '8438FF', '520085', 'CB38FF',
-            'FF95C8', 'FF37C7')
+        hexs = ('FF3838', 'FF9D97', 'FF701F', 'FFB21D', 'CFD231', '48F90A', '92CC17', '3DDB86', '1A9334', '00D4BB',
+                '2C99A8', '00C2FF', '344593', '6473FF', '0018EC', '8438FF', '520085', 'CB38FF', 'FF95C8', 'FF37C7')
         self.palette = [self.hex2rgb(f'#{c}') for c in hexs]
         self.n = len(self.palette)
 
@@ -69,8 +58,7 @@ def check_pil_font(font=FONT, size=10):
             check_font(font)
             return ImageFont.truetype(str(font), size)
         except TypeError:
-            check_requirements(
-                'Pillow>=8.4.0')  # known issue https://github.com/ultralytics/yolov5/issues/5374
+            check_requirements('Pillow>=8.4.0')  # known issue https://github.com/ultralytics/yolov5/issues/5374
         except URLError:  # not online
             return ImageFont.load_default()
 
@@ -84,9 +72,8 @@ class Annotator:
         if self.pil:  # use PIL
             self.im = im if isinstance(im, Image.Image) else Image.fromarray(im)
             self.draw = ImageDraw.Draw(self.im)
-            self.font = check_pil_font(
-                font='Arial.Unicode.ttf' if non_ascii else font,
-                size=font_size or max(round(sum(self.im.size) / 2 * 0.035), 12))
+            self.font = check_pil_font(font='Arial.Unicode.ttf' if non_ascii else font,
+                                       size=font_size or max(round(sum(self.im.size) / 2 * 0.035), 12))
         else:  # use cv2
             self.im = im
         self.lw = line_width or max(round(sum(im.shape) / 2 * 0.003), 2)  # line width
@@ -99,19 +86,14 @@ class Annotator:
                 w, h = self.font.getsize(label)  # text width, height
                 outside = box[1] - h >= 0  # label fits outside box
                 self.draw.rectangle(
-                    (
-                        box[0], box[1] - h if outside else box[1], box[0] + w + 1,
-                        box[1] + 1 if outside else box[1] + h + 1),
+                    (box[0], box[1] - h if outside else box[1], box[0] + w + 1,
+                     box[1] + 1 if outside else box[1] + h + 1),
                     fill=color,
                 )
                 # self.draw.text((box[0], box[1]), label, fill=txt_color, font=self.font, anchor='ls')  # for PIL>8.0
-                self.draw.text((box[0], box[1] - h if outside else box[1]),
-                               label,
-                               fill=txt_color,
-                               font=self.font)
+                self.draw.text((box[0], box[1] - h if outside else box[1]), label, fill=txt_color, font=self.font)
         else:  # cv2
             p1, p2 = (int(box[0]), int(box[1])), (int(box[2]), int(box[3]))
-            self.im = self.im.copy()
             cv2.rectangle(self.im, p1, p2, color, thickness=self.lw, lineType=cv2.LINE_AA)
             if label:
                 tf = max(self.lw - 1, 1)  # font thickness
@@ -119,14 +101,13 @@ class Annotator:
                 outside = p1[1] - h >= 3
                 p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
                 cv2.rectangle(self.im, p1, p2, color, -1, cv2.LINE_AA)  # filled
-                cv2.putText(
-                    self.im,
-                    label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2),
-                    0,
-                    self.lw / 3,
-                    txt_color,
-                    thickness=tf,
-                    lineType=cv2.LINE_AA)
+                cv2.putText(self.im,
+                            label, (p1[0], p1[1] - 2 if outside else p1[1] + h + 2),
+                            0,
+                            self.lw / 3,
+                            txt_color,
+                            thickness=tf,
+                            lineType=cv2.LINE_AA)
 
     def masks(self, masks, colors, im_gpu=None, alpha=0.5):
         """Plot masks at once.
@@ -267,7 +248,7 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None):
     max_subplots = 16  # max image subplots, i.e. 4x4
     bs, _, h, w = images.shape  # batch size, _, height, width
     bs = min(bs, max_subplots)  # limit plot images
-    ns = np.ceil(bs**0.5)  # number of subplots (square)
+    ns = np.ceil(bs ** 0.5)  # number of subplots (square)
     if np.max(images[0]) <= 1:
         images *= 255  # de-normalise (optional)
 
@@ -294,8 +275,7 @@ def plot_images(images, targets, paths=None, fname='images.jpg', names=None):
         x, y = int(w * (i // ns)), int(h * (i % ns))  # block origin
         annotator.rectangle([x, y, x + w, y + h], None, (255, 255, 255), width=2)  # borders
         if paths:
-            annotator.text((x + 5, y + 5), text=Path(paths[i]).name[:40],
-                           txt_color=(220, 220, 220))  # filenames
+            annotator.text((x + 5, y + 5), text=Path(paths[i]).name[:40], txt_color=(220, 220, 220))  # filenames
         if len(targets) > 0:
             ti = targets[targets[:, 0] == i]  # image targets
             boxes = xywh2xyxy(ti[:, 2:6]).T
@@ -381,30 +361,25 @@ def plot_val_study(file='', dir='', x=None):  # from utils.plots import *; plot_
         y = np.loadtxt(f, dtype=np.float32, usecols=[0, 1, 2, 3, 7, 8, 9], ndmin=2).T
         x = np.arange(y.shape[1]) if x is None else np.array(x)
         if plot2:
-            s = [
-                'P', 'R', 'mAP@.5', 'mAP@.5:.95', 't_preprocess (ms/img)', 't_inference (ms/img)',
-                't_NMS (ms/img)'
-            ]
+            s = ['P', 'R', 'mAP@.5', 'mAP@.5:.95', 't_preprocess (ms/img)', 't_inference (ms/img)', 't_NMS (ms/img)']
             for i in range(7):
                 ax[i].plot(x, y[i], '.-', linewidth=2, markersize=8)
                 ax[i].set_title(s[i])
 
         j = y[3].argmax() + 1
-        ax2.plot(
-            y[5, 1:j],
-            y[3, 1:j] * 1E2,
-            '.-',
-            linewidth=2,
-            markersize=8,
-            label=f.stem.replace('study_coco_', '').replace('yolo', 'YOLO'))
+        ax2.plot(y[5, 1:j],
+                 y[3, 1:j] * 1E2,
+                 '.-',
+                 linewidth=2,
+                 markersize=8,
+                 label=f.stem.replace('study_coco_', '').replace('yolo', 'YOLO'))
 
-    ax2.plot(
-        1E3 / np.array([209, 140, 97, 58, 35, 18]), [34.6, 40.5, 43.0, 47.5, 49.7, 51.5],
-        'k.-',
-        linewidth=2,
-        markersize=8,
-        alpha=.25,
-        label='EfficientDet')
+    ax2.plot(1E3 / np.array([209, 140, 97, 58, 35, 18]), [34.6, 40.5, 43.0, 47.5, 49.7, 51.5],
+             'k.-',
+             linewidth=2,
+             markersize=8,
+             alpha=.25,
+             label='EfficientDet')
 
     ax2.grid(alpha=0.2)
     ax2.set_yticks(np.arange(20, 60, 5))
@@ -427,8 +402,7 @@ def plot_labels(labels, names=(), save_dir=Path('')):
     x = pd.DataFrame(b.transpose(), columns=['x', 'y', 'width', 'height'])
 
     # seaborn correlogram
-    sn.pairplot(
-        x, corner=True, diag_kind='auto', kind='hist', diag_kws=dict(bins=50), plot_kws=dict(pmax=0.9))
+    sn.pairplot(x, corner=True, diag_kind='auto', kind='hist', diag_kws=dict(bins=50), plot_kws=dict(pmax=0.9))
     plt.savefig(save_dir / 'labels_correlogram.jpg', dpi=200)
     plt.close()
 
@@ -470,10 +444,10 @@ def imshow_cls(im, labels=None, pred=None, names=None, nmax=25, verbose=False, f
     from utils.augmentations import denormalize
 
     names = names or [f'class{i}' for i in range(1000)]
-    blocks = torch.chunk(
-        denormalize(im.clone()).cpu().float(), len(im), dim=0)  # select batch index 0, block by channels
+    blocks = torch.chunk(denormalize(im.clone()).cpu().float(), len(im),
+                         dim=0)  # select batch index 0, block by channels
     n = min(len(blocks), nmax)  # number of plots
-    m = min(8, round(n**0.5))  # 8 x 8 default
+    m = min(8, round(n ** 0.5))  # 8 x 8 default
     fig, ax = plt.subplots(math.ceil(n / m), m)  # 8 rows x n/8 cols
     ax = ax.ravel() if m > 1 else [ax]
     # plt.subplots_adjust(wspace=0.05, hspace=0.05)
@@ -550,10 +524,7 @@ def plot_results(file='path/to/results.csv', dir=''):
 def profile_idetection(start=0, stop=0, labels=(), save_dir=''):
     # Plot iDetection '*.txt' per-image logs. from utils.plots import *; profile_idetection()
     ax = plt.subplots(2, 4, figsize=(12, 6), tight_layout=True)[1].ravel()
-    s = [
-        'Images', 'Free Storage (GB)', 'RAM Usage (GB)', 'Battery', 'dt_raw (ms)', 'dt_smooth (ms)',
-        'real-world FPS'
-    ]
+    s = ['Images', 'Free Storage (GB)', 'RAM Usage (GB)', 'Battery', 'dt_raw (ms)', 'dt_smooth (ms)', 'real-world FPS']
     files = list(Path(save_dir).glob('frames*.txt'))
     for fi, f in enumerate(files):
         try:

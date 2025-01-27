@@ -2,8 +2,7 @@ import torch
 
 
 def _create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbose=True, device=None):
-    """
-    Creates or loads a YOLO model.
+    """Creates or loads a YOLO model
 
     Arguments:
         name (str): model name 'yolov3' or path 'path/to/best.pt'
@@ -38,13 +37,11 @@ def _create(name, pretrained=True, channels=3, classes=80, autoshape=True, verbo
                 model = DetectMultiBackend(path, device=device, fuse=autoshape)  # detection model
                 if autoshape:
                     if model.pt and isinstance(model.model, ClassificationModel):
-                        LOGGER.warning(
-                            'WARNING ⚠️ YOLO ClassificationModel is not yet AutoShape compatible. '
-                            'You must pass torch tensors in BCHW to this model, i.e. shape(1,3,224,224).')
+                        LOGGER.warning('WARNING ⚠️ YOLO ClassificationModel is not yet AutoShape compatible. '
+                                       'You must pass torch tensors in BCHW to this model, i.e. shape(1,3,224,224).')
                     elif model.pt and isinstance(model.model, SegmentationModel):
-                        LOGGER.warning(
-                            'WARNING ⚠️ YOLO SegmentationModel is not yet AutoShape compatible. '
-                            'You will not be able to run inference with this model.')
+                        LOGGER.warning('WARNING ⚠️ YOLO SegmentationModel is not yet AutoShape compatible. '
+                                       'You will not be able to run inference with this model.')
                     else:
                         model = AutoShape(model)  # for file/URI/PIL/cv2/np inputs and NMS
             except Exception:
@@ -80,6 +77,7 @@ if __name__ == '__main__':
 
     import numpy as np
     from PIL import Image
+
     from utils.general import cv2, print_args
 
     # Argparser
@@ -99,8 +97,7 @@ if __name__ == '__main__':
         'https://ultralytics.com/images/zidane.jpg',  # URI
         cv2.imread('data/images/bus.jpg')[:, :, ::-1],  # OpenCV
         Image.open('data/images/bus.jpg'),  # PIL
-        np.zeros((320, 640, 3))
-    ]  # numpy
+        np.zeros((320, 640, 3))]  # numpy
 
     # Inference
     results = model(imgs, size=320)  # batched inference

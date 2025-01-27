@@ -7,9 +7,7 @@ class Lion(Optimizer):
     r"""Implements Lion algorithm."""
 
     def __init__(self, params, lr=1e-4, betas=(0.9, 0.99), weight_decay=0.0):
-        """
-        Initialize the hyperparameters.
-
+        """Initialize the hyperparameters.
         Args:
           params (iterable): iterable of parameters to optimize or dicts defining
             parameter groups
@@ -30,9 +28,7 @@ class Lion(Optimizer):
 
     @torch.no_grad()
     def step(self, closure=None):
-        """
-        Performs a single optimization step.
-
+        """Performs a single optimization step.
         Args:
           closure (callable, optional): A closure that reevaluates the model
             and returns the loss.

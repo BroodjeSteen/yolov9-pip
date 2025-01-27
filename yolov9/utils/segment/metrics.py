@@ -25,10 +25,22 @@ def ap_per_class_box_and_mask(
         tp_m: tp of masks.
         other arguments see `func: ap_per_class`.
     """
-    results_boxes = ap_per_class(
-        tp_b, conf, pred_cls, target_cls, plot=plot, save_dir=save_dir, names=names, prefix="Box")[2:]
-    results_masks = ap_per_class(
-        tp_m, conf, pred_cls, target_cls, plot=plot, save_dir=save_dir, names=names, prefix="Mask")[2:]
+    results_boxes = ap_per_class(tp_b,
+                                 conf,
+                                 pred_cls,
+                                 target_cls,
+                                 plot=plot,
+                                 save_dir=save_dir,
+                                 names=names,
+                                 prefix="Box")[2:]
+    results_masks = ap_per_class(tp_m,
+                                 conf,
+                                 pred_cls,
+                                 target_cls,
+                                 plot=plot,
+                                 save_dir=save_dir,
+                                 names=names,
+                                 prefix="Mask")[2:]
 
     results = {
         "boxes": {
@@ -36,16 +48,13 @@ def ap_per_class_box_and_mask(
             "r": results_boxes[1],
             "ap": results_boxes[3],
             "f1": results_boxes[2],
-            "ap_class": results_boxes[4]
-        },
+            "ap_class": results_boxes[4]},
         "masks": {
             "p": results_masks[0],
             "r": results_masks[1],
             "ap": results_masks[3],
             "f1": results_masks[2],
-            "ap_class": results_masks[4]
-        }
-    }
+            "ap_class": results_masks[4]}}
     return results
 
 
@@ -60,9 +69,7 @@ class Metric:
 
     @property
     def ap50(self):
-        """
-        AP@0.5 of all classes.
-
+        """AP@0.5 of all classes.
         Return:
             (nc, ) or [].
         """
@@ -78,9 +85,7 @@ class Metric:
 
     @property
     def mp(self):
-        """
-        Mean precision of all classes.
-
+        """mean precision of all classes.
         Return:
             float.
         """
@@ -88,9 +93,7 @@ class Metric:
 
     @property
     def mr(self):
-        """
-        Mean recall of all classes.
-
+        """mean recall of all classes.
         Return:
             float.
         """
@@ -98,9 +101,7 @@ class Metric:
 
     @property
     def map50(self):
-        """
-        Mean AP@0.5 of all classes.
-
+        """Mean AP@0.5 of all classes.
         Return:
             float.
         """
@@ -108,20 +109,18 @@ class Metric:
 
     @property
     def map(self):
-        """
-        Mean AP@0.5:0.95 of all classes.
-
+        """Mean AP@0.5:0.95 of all classes.
         Return:
             float.
         """
         return self.all_ap.mean() if len(self.all_ap) else 0.0
 
     def mean_results(self):
-        """Mean of results, return mp, mr, map50, map."""
+        """Mean of results, return mp, mr, map50, map"""
         return (self.mp, self.mr, self.map50, self.map)
 
     def class_result(self, i):
-        """Class-aware result, return p[i], r[i], ap50[i], ap[i]"""
+        """class-aware result, return p[i], r[i], ap50[i], ap[i]"""
         return (self.p[i], self.r[i], self.ap50[i], self.ap[i])
 
     def get_maps(self, nc):
@@ -192,8 +191,7 @@ KEYS = [
     "val/cls_loss",
     "x/lr0",
     "x/lr1",
-    "x/lr2",
-]
+    "x/lr2",]
 
 BEST_KEYS = [
     "best/epoch",
@@ -204,5 +202,4 @@ BEST_KEYS = [
     "best/precision(M)",
     "best/recall(M)",
     "best/mAP_0.5(M)",
-    "best/mAP_0.5:0.95(M)",
-]
+    "best/mAP_0.5:0.95(M)",]

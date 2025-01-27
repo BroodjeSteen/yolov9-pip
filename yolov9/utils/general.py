@@ -30,6 +30,7 @@ import pkg_resources as pkg
 import torch
 import torchvision
 import yaml
+
 from utils import TryExcept, emojis
 from utils.downloads import gsutil_getsize
 from utils.metrics import box_iou, fitness
@@ -47,13 +48,11 @@ TQDM_BAR_FORMAT = '{l_bar}{bar:10}| {n_fmt}/{total_fmt} {elapsed}'  # tqdm bar f
 FONT = 'Arial.ttf'  # https://ultralytics.com/assets/Arial.ttf
 
 torch.set_printoptions(linewidth=320, precision=5, profile='long')
-np.set_printoptions(
-    linewidth=320, formatter={'float_kind': '{:11.5g}'.format})  # format short g, %precision=5
+np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format})  # format short g, %precision=5
 pd.options.display.max_columns = 10
 cv2.setNumThreads(0)  # prevent OpenCV from multithreading (incompatible with PyTorch DataLoader)
 os.environ['NUMEXPR_MAX_THREADS'] = str(NUM_THREADS)  # NumExpr max threads
-os.environ['OMP_NUM_THREADS'] = '1' if platform.system() == 'darwin' else str(
-    NUM_THREADS)  # OpenMP (PyTorch and SciPy)
+os.environ['OMP_NUM_THREADS'] = '1' if platform.system() == 'darwin' else str(NUM_THREADS)  # OpenMP (PyTorch and SciPy)
 
 
 def is_ascii(s=''):
@@ -80,8 +79,7 @@ def is_notebook():
 
 def is_kaggle():
     # Is environment a Kaggle Notebook?
-    return os.environ.get('PWD') == '/kaggle/working' and os.environ.get(
-        'KAGGLE_URL_BASE') == 'https://www.kaggle.com'
+    return os.environ.get('PWD') == '/kaggle/working' and os.environ.get('KAGGLE_URL_BASE') == 'https://www.kaggle.com'
 
 
 def is_docker() -> bool:
@@ -121,24 +119,17 @@ def set_logging(name=LOGGING_NAME, verbose=True):
         "disable_existing_loggers": False,
         "formatters": {
             name: {
-                "format": "%(message)s"
-            }
-        },
+                "format": "%(message)s"}},
         "handlers": {
             name: {
                 "class": "logging.StreamHandler",
                 "formatter": name,
-                "level": level,
-            }
-        },
+                "level": level,}},
         "loggers": {
             name: {
                 "level": level,
                 "handlers": [name],
-                "propagate": False,
-            }
-        }
-    })
+                "propagate": False,}}})
 
 
 set_logging(LOGGING_NAME)  # run before defining LOGGER
@@ -154,15 +145,9 @@ def user_config_dir(dir='Ultralytics', env_var='YOLOV5_CONFIG_DIR'):
     if env:
         path = Path(env)  # use environment variable
     else:
-        cfg = {
-            'Windows': 'AppData/Roaming',
-            'Linux': '.config',
-            'Darwin': 'Library/Application Support'
-        }  # 3 OS dirs
+        cfg = {'Windows': 'AppData/Roaming', 'Linux': '.config', 'Darwin': 'Library/Application Support'}  # 3 OS dirs
         path = Path.home() / cfg.get(platform.system(), '')  # OS-specific config dir
-        path = (
-            path
-            if is_writeable(path) else Path('/tmp')) / dir  # GCP and AWS lambda fix, only /tmp is writeable
+        path = (path if is_writeable(path) else Path('/tmp')) / dir  # GCP and AWS lambda fix, only /tmp is writeable
     path.mkdir(exist_ok=True)  # make if required
     return path
 
@@ -253,8 +238,7 @@ def init_seeds(seed=0, deterministic=False):
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)  # for Multi-GPU, exception safe
     # torch.backends.cudnn.benchmark = True  # AutoBatch problem https://github.com/ultralytics/yolov5/issues/9287
-    if deterministic and check_version(torch.__version__,
-                                       '1.12.0'):  # https://github.com/ultralytics/yolov5/pull/8213
+    if deterministic and check_version(torch.__version__, '1.12.0'):  # https://github.com/ultralytics/yolov5/pull/8213
         torch.use_deterministic_algorithms(True)
         torch.backends.cudnn.deterministic = True
         os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
@@ -263,10 +247,7 @@ def init_seeds(seed=0, deterministic=False):
 
 def intersect_dicts(da, db, exclude=()):
     # Dictionary intersection of matching keys and shapes, omitting 'exclude' keys, using da values
-    return {
-        k: v
-        for k, v in da.items() if k in db and all(x not in k for x in exclude) and v.shape == db[k].shape
-    }
+    return {k: v for k, v in da.items() if k in db and all(x not in k for x in exclude) and v.shape == db[k].shape}
 
 
 def get_default_args(func):
@@ -348,8 +329,7 @@ def check_git_status(repo='WongKinYiu/yolov9', branch='main'):
         check_output(f'git remote add {remote} {url}', shell=True)
     check_output(f'git fetch {remote}', shell=True, timeout=5)  # git fetch
     local_branch = check_output('git rev-parse --abbrev-ref HEAD', shell=True).decode().strip()  # checked out
-    n = int(
-        check_output(f'git rev-list {local_branch}..{remote}/{branch} --count', shell=True))  # commits behind
+    n = int(check_output(f'git rev-list {local_branch}..{remote}/{branch} --count', shell=True))  # commits behind
     if n > 0:
         pull = 'git pull' if remote == 'origin' else f'git pull {remote} {branch}'
         s += f"⚠️ YOLO is out of date by {n} commit{'s' * (n > 1)}. Use `{pull}` or `git clone {url}` to update."
@@ -402,9 +382,7 @@ def check_requirements(requirements=ROOT / 'requirements.txt', exclude=(), insta
         file = requirements.resolve()
         assert file.exists(), f"{prefix} {file} not found, check failed."
         with file.open() as f:
-            requirements = [
-                f'{x.name}{x.specifier}' for x in pkg.parse_requirements(f) if x.name not in exclude
-            ]
+            requirements = [f'{x.name}{x.specifier}' for x in pkg.parse_requirements(f) if x.name not in exclude]
     elif isinstance(requirements, str):
         requirements = [requirements]
 
@@ -438,8 +416,7 @@ def check_img_size(imgsz, s=32, floor=0):
         imgsz = list(imgsz)  # convert to list if tuple
         new_size = [max(make_divisible(x, int(s)), floor) for x in imgsz]
     if new_size != imgsz:
-        LOGGER.warning(
-            f'WARNING ⚠️ --img-size {imgsz} must be multiple of max stride {s}, updating to {new_size}')
+        LOGGER.warning(f'WARNING ⚠️ --img-size {imgsz} must be multiple of max stride {s}, updating to {new_size}')
     return new_size
 
 
@@ -459,7 +436,7 @@ def check_imshow(warn=False):
         return False
 
 
-def check_suffix(file='yolo.pt', suffix=('.pt', ), msg=''):
+def check_suffix(file='yolo.pt', suffix=('.pt',), msg=''):
     # Check file(s) for acceptable suffix
     if file and suffix:
         if isinstance(suffix, str):
@@ -483,16 +460,13 @@ def check_file(file, suffix=''):
         return file
     elif file.startswith(('http:/', 'https:/')):  # download
         url = file  # warning: Pathlib turns :// -> :/
-        file = Path(
-            urllib.parse.unquote(file).split('?')
-            [0]).name  # '%2F' to '/', split https://url.com/file.txt?auth
+        file = Path(urllib.parse.unquote(file).split('?')[0]).name  # '%2F' to '/', split https://url.com/file.txt?auth
         if os.path.isfile(file):
             LOGGER.info(f'Found {url} locally at {file}')  # file already exists
         else:
             LOGGER.info(f'Downloading {url} to {file}...')
             torch.hub.download_url_to_file(url, file)
-            assert Path(file).exists() and Path(
-                file).stat().st_size > 0, f'File download failed: {url}'  # check
+            assert Path(file).exists() and Path(file).stat().st_size > 0, f'File download failed: {url}'  # check
         return file
     elif file.startswith('clearml://'):  # ClearML Dataset ID
         assert 'clearml' in sys.modules, "ClearML is not installed, so cannot use ClearML dataset. Try running 'pip install clearml'."
@@ -522,8 +496,7 @@ def check_dataset(data, autodownload=True):
     # Download (optional)
     extract_dir = ''
     if isinstance(data, (str, Path)) and (is_zipfile(data) or is_tarfile(data)):
-        download(
-            data, dir=f'{DATASETS_DIR}/{Path(data).stem}', unzip=True, delete=False, curl=False, threads=1)
+        download(data, dir=f'{DATASETS_DIR}/{Path(data).stem}', unzip=True, delete=False, curl=False, threads=1)
         data = next((DATASETS_DIR / Path(data).stem).rglob('*.yaml'))
         extract_dir, autodownload = data.parent, False
 
@@ -536,9 +509,7 @@ def check_dataset(data, autodownload=True):
         assert k in data, emojis(f"data.yaml '{k}:' field missing ❌")
     if isinstance(data['names'], (list, tuple)):  # old array format
         data['names'] = dict(enumerate(data['names']))  # convert to dict
-    assert all(
-        isinstance(k, int)
-        for k in data['names'].keys()), 'data.yaml names keys must be integers, i.e. 2: car'
+    assert all(isinstance(k, int) for k in data['names'].keys()), 'data.yaml names keys must be integers, i.e. 2: car'
     data['nc'] = len(data['names'])
 
     # Resolve paths
@@ -579,11 +550,9 @@ def check_dataset(data, autodownload=True):
             else:  # python script
                 r = exec(s, {'yaml': data})  # return None
             dt = f'({round(time.time() - t, 1)}s)'
-            s = f"success ✅ {dt}, saved to {colorstr('bold', DATASETS_DIR)}" if r in (
-                0, None) else f"failure {dt} ❌"
+            s = f"success ✅ {dt}, saved to {colorstr('bold', DATASETS_DIR)}" if r in (0, None) else f"failure {dt} ❌"
             LOGGER.info(f"Dataset download {s}")
-    check_font(
-        'Arial.ttf' if is_ascii(data['names']) else 'Arial.Unicode.ttf', progress=True)  # download fonts
+    check_font('Arial.ttf' if is_ascii(data['names']) else 'Arial.Unicode.ttf', progress=True)  # download fonts
     return data  # dictionary
 
 
@@ -604,8 +573,7 @@ def check_amp(model):
     if device.type in ('cpu', 'mps'):
         return False  # AMP only used on CUDA devices
     f = ROOT / 'data' / 'images' / 'bus.jpg'  # image to check
-    im = f if f.exists() else 'https://ultralytics.com/images/bus.jpg' if check_online() else np.ones(
-        (640, 640, 3))
+    im = f if f.exists() else 'https://ultralytics.com/images/bus.jpg' if check_online() else np.ones((640, 640, 3))
     try:
         #assert amp_allclose(deepcopy(model), im) or amp_allclose(DetectMultiBackend('yolo.pt', device), im)
         LOGGER.info(f'{prefix}checks passed ✅')
@@ -641,8 +609,7 @@ def unzip_file(file, path=None, exclude=('.DS_Store', '__MACOSX')):
 def url2file(url):
     # Convert URL to filename, i.e. https://url.com/file.txt?auth -> file.txt
     url = str(Path(url)).replace(':/', '://')  # Pathlib turns :// -> :/
-    return Path(
-        urllib.parse.unquote(url)).name.split('?')[0]  # '%2F' to '/', split https://url.com/file.txt?auth
+    return Path(urllib.parse.unquote(url)).name.split('?')[0]  # '%2F' to '/', split https://url.com/file.txt?auth
 
 
 def download(url, dir='.', unzip=True, delete=True, curl=False, threads=1, retry=3):
@@ -659,8 +626,7 @@ def download(url, dir='.', unzip=True, delete=True, curl=False, threads=1, retry
                 if curl:
                     s = 'sS' if threads > 1 else ''  # silent
                     r = os.system(
-                        f'curl -# -{s}L "{url}" -o "{f}" --retry 9 -C -'
-                    )  # curl download with retry, continue
+                        f'curl -# -{s}L "{url}" -o "{f}" --retry 9 -C -')  # curl download with retry, continue
                     success = r == 0
                 else:
                     torch.hub.download_url_to_file(url, f, progress=threads == 1)  # torch download
@@ -715,8 +681,7 @@ def one_cycle(y1=0.0, y2=1.0, steps=100):
 def one_flat_cycle(y1=0.0, y2=1.0, steps=100):
     # lambda function for sinusoidal ramp from y1 to y2 https://arxiv.org/pdf/1812.01187.pdf
     #return lambda x: ((1 - math.cos(x * math.pi / steps)) / 2) * (y2 - y1) + y1
-    return lambda x: ((1 - math.cos((x - (steps // 2)) * math.pi /
-                                    (steps // 2))) / 2) * (y2 - y1) + y1 if (x > (steps // 2)) else y1
+    return lambda x: ((1 - math.cos((x - (steps // 2)) * math.pi / (steps // 2))) / 2) * (y2 - y1) + y1 if (x > (steps // 2)) else y1
 
 
 def colorstr(*input):
@@ -741,8 +706,7 @@ def colorstr(*input):
         'bright_white': '\033[97m',
         'end': '\033[0m',  # misc
         'bold': '\033[1m',
-        'underline': '\033[4m'
-    }
+        'underline': '\033[4m'}
     return ''.join(colors[x] for x in args) + f'{string}' + colors['end']
 
 
@@ -779,11 +743,9 @@ def coco80_to_coco91_class():  # converts 80-index (val2014) to 91-index (paper)
     # x1 = [list(a[i] == b).index(True) + 1 for i in range(80)]  # darknet to coco
     # x2 = [list(b[i] == a).index(True) if any(b[i] == a) else None for i in range(91)]  # coco to darknet
     return [
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27, 28, 31, 32,
-        33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
-        59, 60, 61, 62, 63, 64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88,
-        89, 90
-    ]
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34,
+        35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63,
+        64, 65, 67, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90]
 
 
 def xyxy2xywh(x):
@@ -859,8 +821,7 @@ def resample_segments(segments, n=1000):
         s = np.concatenate((s, s[0:1, :]), axis=0)
         x = np.linspace(0, len(s) - 1, n)
         xp = np.arange(len(s))
-        segments[i] = np.concatenate([np.interp(x, xp, s[:, i])
-                                      for i in range(2)]).reshape(2, -1).T  # segment xy
+        segments[i] = np.concatenate([np.interp(x, xp, s[:, i]) for i in range(2)]).reshape(2, -1).T  # segment xy
     return segments
 
 
@@ -868,8 +829,7 @@ def scale_boxes(img1_shape, boxes, img0_shape, ratio_pad=None):
     # Rescale boxes (xyxy) from img1_shape to img0_shape
     if ratio_pad is None:  # calculate from img0_shape
         gain = min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])  # gain  = old / new
-        pad = (img1_shape[1] -
-               img0_shape[1] * gain) / 2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
+        pad = (img1_shape[1] - img0_shape[1] * gain) / 2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
     else:
         gain = ratio_pad[0][0]
         pad = ratio_pad[1]
@@ -885,8 +845,7 @@ def scale_segments(img1_shape, segments, img0_shape, ratio_pad=None, normalize=F
     # Rescale coords (xyxy) from img1_shape to img0_shape
     if ratio_pad is None:  # calculate from img0_shape
         gain = min(img1_shape[0] / img0_shape[0], img1_shape[1] / img0_shape[1])  # gain  = old / new
-        pad = (img1_shape[1] -
-               img0_shape[1] * gain) / 2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
+        pad = (img1_shape[1] - img0_shape[1] * gain) / 2, (img1_shape[0] - img0_shape[0] * gain) / 2  # wh padding
     else:
         gain = ratio_pad[0][0]
         pad = ratio_pad[1]
@@ -934,15 +893,13 @@ def non_max_suppression(
         max_det=300,
         nm=0,  # number of masks
 ):
-    """
-    Non-Maximum Suppression (NMS) on inference results to reject overlapping detections.
+    """Non-Maximum Suppression (NMS) on inference results to reject overlapping detections
 
     Returns:
          list of detections, on (n,6) tensor per image [xyxy, conf, cls]
     """
 
-    if isinstance(prediction,
-                  (list, tuple)):  # YOLO model in validation model, output = (inference_out, loss_out)
+    if isinstance(prediction, (list, tuple)):  # YOLO model in validation model, output = (inference_out, loss_out)
         prediction = prediction[0]  # select only inference output
 
     device = prediction.device
@@ -1078,19 +1035,15 @@ def print_mutation(keys, results, hyp, save_dir, bucket, prefix=colorstr('evolve
         data = data.rename(columns=lambda x: x.strip())  # strip keys
         i = np.argmax(fitness(data.values[:, :4]))  #
         generations = len(data)
-        f.write(
-            '# YOLO Hyperparameter Evolution Results\n' + f'# Best generation: {i}\n' +
-            f'# Last generation: {generations - 1}\n' + '# ' +
-            ', '.join(f'{x.strip():>20s}'
-                      for x in keys[:7]) + '\n' + '# ' + ', '.join(f'{x:>20.5g}'
-                                                                   for x in data.values[i, :7]) + '\n\n')
+        f.write('# YOLO Hyperparameter Evolution Results\n' + f'# Best generation: {i}\n' +
+                f'# Last generation: {generations - 1}\n' + '# ' + ', '.join(f'{x.strip():>20s}' for x in keys[:7]) +
+                '\n' + '# ' + ', '.join(f'{x:>20.5g}' for x in data.values[i, :7]) + '\n\n')
         yaml.safe_dump(data.loc[i][7:].to_dict(), f, sort_keys=False)
 
     # Print to screen
-    LOGGER.info(
-        prefix + f'{generations} generations finished, current result:\n' + prefix +
-        ', '.join(f'{x.strip():>20s}' for x in keys) + '\n' + prefix + ', '.join(f'{x:20.5g}'
-                                                                                 for x in vals) + '\n\n')
+    LOGGER.info(prefix + f'{generations} generations finished, current result:\n' + prefix +
+                ', '.join(f'{x.strip():>20s}' for x in keys) + '\n' + prefix + ', '.join(f'{x:20.5g}'
+                                                                                         for x in vals) + '\n\n')
 
     if bucket:
         os.system(f'gsutil cp {evolve_csv} {evolve_yaml} gs://{bucket}')  # upload

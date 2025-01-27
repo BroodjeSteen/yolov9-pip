@@ -45,9 +45,7 @@ def safe_download(file, url, url2=None, min_bytes=1E0, error_msg=''):
         if file.exists():
             file.unlink()  # remove partial downloads
         LOGGER.info(f'ERROR: {e}\nRe-attempting {url2 or url} to {file}...')
-        os.system(
-            f"curl -# -L '{url2 or url}' -o '{file}' --retry 3 -C -"
-        )  # curl download, retry and resume on fail
+        os.system(f"curl -# -L '{url2 or url}' -o '{file}' --retry 3 -C -")  # curl download, retry and resume on fail
     finally:
         if not file.exists() or file.stat().st_size < min_bytes:  # check
             if file.exists():
@@ -64,8 +62,7 @@ def attempt_download(file, repo='ultralytics/yolov5', release='v7.0'):
         # Return GitHub repo tag (i.e. 'v7.0') and assets (i.e. ['yolov5s.pt', 'yolov5m.pt', ...])
         if version != 'latest':
             version = f'tags/{version}'  # i.e. tags/v7.0
-        response = requests.get(
-            f'https://api.github.com/repos/{repository}/releases/{version}').json()  # github api
+        response = requests.get(f'https://api.github.com/repos/{repository}/releases/{version}').json()  # github api
         return response['tag_name'], [x['name'] for x in response['assets']]  # tag, assets
 
     file = Path(str(file).strip().replace("'", ''))
@@ -82,9 +79,7 @@ def attempt_download(file, repo='ultralytics/yolov5', release='v7.0'):
             return file
 
         # GitHub assets
-        assets = [
-            f'yolov5{size}{suffix}.pt' for size in 'nsmlx' for suffix in ('', '6', '-cls', '-seg')
-        ]  # default
+        assets = [f'yolov5{size}{suffix}.pt' for size in 'nsmlx' for suffix in ('', '6', '-cls', '-seg')]  # default
         try:
             tag, assets = github_assets(repo, release)
         except Exception:
@@ -92,8 +87,7 @@ def attempt_download(file, repo='ultralytics/yolov5', release='v7.0'):
                 tag, assets = github_assets(repo)  # latest release
             except Exception:
                 try:
-                    tag = subprocess.check_output(
-                        'git tag', shell=True, stderr=subprocess.STDOUT).decode().split()[-1]
+                    tag = subprocess.check_output('git tag', shell=True, stderr=subprocess.STDOUT).decode().split()[-1]
                 except Exception:
                     tag = release
 
@@ -104,7 +98,6 @@ def attempt_download(file, repo='ultralytics/yolov5', release='v7.0'):
                 file,
                 url=f'https://github.com/{repo}/releases/download/{tag}/{name}',
                 min_bytes=1E5,
-                error_msg=
-                f'{file} missing, try downloading from https://github.com/{repo}/releases/{tag} or {url3}')
+                error_msg=f'{file} missing, try downloading from https://github.com/{repo}/releases/{tag} or {url3}')
 
     return str(file)

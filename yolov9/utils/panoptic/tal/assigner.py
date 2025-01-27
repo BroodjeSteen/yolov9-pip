@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from utils.metrics import bbox_iou
 
 
 def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
-    """
-    Select the positive anchor center in gt.
+    """select the positive anchor center in gt
 
     Args:
         xy_centers (Tensor): shape(h*w, 4)
@@ -17,15 +17,14 @@ def select_candidates_in_gts(xy_centers, gt_bboxes, eps=1e-9):
     n_anchors = xy_centers.shape[0]
     bs, n_boxes, _ = gt_bboxes.shape
     lt, rb = gt_bboxes.view(-1, 1, 4).chunk(2, 2)  # left-top, right-bottom
-    bbox_deltas = torch.cat((xy_centers[None] - lt, rb - xy_centers[None]),
-                            dim=2).view(bs, n_boxes, n_anchors, -1)
+    bbox_deltas = torch.cat((xy_centers[None] - lt, rb - xy_centers[None]), dim=2).view(bs, n_boxes, n_anchors, -1)
     # return (bbox_deltas.min(3)[0] > eps).to(gt_bboxes.dtype)
     return bbox_deltas.amin(3).gt_(eps)
 
 
 def select_highest_overlaps(mask_pos, overlaps, n_max_boxes):
-    """
-    If an anchor box is assigned to multiple gts, the one with the highest iou will be selected.
+    """if an anchor box is assigned to multiple gts,
+        the one with the highest iou will be selected.
 
     Args:
         mask_pos (Tensor): shape(b, n_max_boxes, h*w)
@@ -50,7 +49,6 @@ def select_highest_overlaps(mask_pos, overlaps, n_max_boxes):
 
 
 class TaskAlignedAssigner(nn.Module):
-
     def __init__(self, topk=13, num_classes=80, alpha=1.0, beta=6.0, eps=1e-9):
         super().__init__()
         self.topk = topk
@@ -83,27 +81,25 @@ class TaskAlignedAssigner(nn.Module):
 
         if self.n_max_boxes == 0:
             device = gt_bboxes.device
-            return (
-                torch.full_like(pd_scores[..., 0],
-                                self.bg_idx).to(device), torch.zeros_like(pd_bboxes).to(device),
-                torch.zeros_like(pd_scores).to(device), torch.zeros_like(pd_scores[..., 0]).to(device),
-                torch.zeros_like(pd_scores[..., 0]).to(device))
+            return (torch.full_like(pd_scores[..., 0], self.bg_idx).to(device),
+                    torch.zeros_like(pd_bboxes).to(device),
+                    torch.zeros_like(pd_scores).to(device),
+                    torch.zeros_like(pd_scores[..., 0]).to(device),
+                    torch.zeros_like(pd_scores[..., 0]).to(device))
 
-        mask_pos, align_metric, overlaps = self.get_pos_mask(
-            pd_scores, pd_bboxes, gt_labels, gt_bboxes, anc_points, mask_gt)
+        mask_pos, align_metric, overlaps = self.get_pos_mask(pd_scores, pd_bboxes, gt_labels, gt_bboxes, anc_points,
+                                                             mask_gt)
 
         target_gt_idx, fg_mask, mask_pos = select_highest_overlaps(mask_pos, overlaps, self.n_max_boxes)
 
         # assigned target
-        target_labels, target_bboxes, target_scores = self.get_targets(
-            gt_labels, gt_bboxes, target_gt_idx, fg_mask)
+        target_labels, target_bboxes, target_scores = self.get_targets(gt_labels, gt_bboxes, target_gt_idx, fg_mask)
 
         # normalize
         align_metric *= mask_pos
         pos_align_metrics = align_metric.amax(axis=-1, keepdim=True)  # b, max_num_obj
         pos_overlaps = (overlaps * mask_pos).amax(axis=-1, keepdim=True)  # b, max_num_obj
-        norm_align_metric = (align_metric * pos_overlaps /
-                             (pos_align_metrics + self.eps)).amax(-2).unsqueeze(-1)
+        norm_align_metric = (align_metric * pos_overlaps / (pos_align_metrics + self.eps)).amax(-2).unsqueeze(-1)
         target_scores = target_scores * norm_align_metric
 
         return target_labels, target_bboxes, target_scores, fg_mask.bool(), target_gt_idx
@@ -115,8 +111,8 @@ class TaskAlignedAssigner(nn.Module):
         # get in_gts mask, (b, max_num_obj, h*w)
         mask_in_gts = select_candidates_in_gts(anc_points, gt_bboxes)
         # get topk_metric mask, (b, max_num_obj, h*w)
-        mask_topk = self.select_topk_candidates(
-            align_metric * mask_in_gts, topk_mask=mask_gt.repeat([1, 1, self.topk]).bool())
+        mask_topk = self.select_topk_candidates(align_metric * mask_in_gts,
+                                                topk_mask=mask_gt.repeat([1, 1, self.topk]).bool())
         # merge all mask to a final mask, (b, max_num_obj, h*w)
         mask_pos = mask_topk * mask_in_gts * mask_gt
 
@@ -131,8 +127,7 @@ class TaskAlignedAssigner(nn.Module):
         # get the scores of each grid for each gt cls
         bbox_scores = pd_scores[ind[0], :, ind[1]]  # b, max_num_obj, h*w
 
-        overlaps = bbox_iou(
-            gt_bboxes.unsqueeze(2), pd_bboxes.unsqueeze(1), xywh=False, CIoU=True).squeeze(3).clamp(0)
+        overlaps = bbox_iou(gt_bboxes.unsqueeze(2), pd_bboxes.unsqueeze(1), xywh=False, CIoU=True).squeeze(3).clamp(0)
         #overlaps = bbox_iou(gt_bboxes.unsqueeze(2), pd_bboxes.unsqueeze(1), xywh=False, WIoU=True, scale=True)[-1].squeeze(3).clamp(0)
         align_metric = bbox_scores.pow(self.alpha) * overlaps.pow(self.beta)
         return align_metric, overlaps

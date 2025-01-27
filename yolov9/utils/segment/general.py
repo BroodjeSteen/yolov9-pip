@@ -6,8 +6,8 @@ import torch.nn.functional as F
 
 def crop_mask(masks, boxes):
     """
-    "Crop" predicted masks by zeroing out everything not in the predicted bbox. Vectorized by Chong (thanks
-    Chong).
+    "Crop" predicted masks by zeroing out everything not in the predicted bbox.
+    Vectorized by Chong (thanks Chong).
 
     Args:
         - masks should be a size [h, w, n] tensor of masks

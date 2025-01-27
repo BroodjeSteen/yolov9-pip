@@ -5,11 +5,9 @@ import torch
 
 
 class TritonRemoteModel:
-    """
-    A wrapper over a model served by the Triton Inference Server.
-
-    It can be configured to communicate over GRPC or HTTP. It accepts Torch Tensors as input and returns them
-    as outputs.
+    """ A wrapper over a model served by the Triton Inference Server. It can
+    be configured to communicate over GRPC or HTTP. It accepts Torch Tensors
+    as input and returns them as outputs.
     """
 
     def __init__(self, url: str):
@@ -29,9 +27,7 @@ class TritonRemoteModel:
 
             def create_input_placeholders() -> typing.List[InferInput]:
                 return [
-                    InferInput(i['name'], [int(s) for s in i["shape"]], i['datatype'])
-                    for i in self.metadata['inputs']
-                ]
+                    InferInput(i['name'], [int(s) for s in i["shape"]], i['datatype']) for i in self.metadata['inputs']]
 
         else:
             from tritonclient.http import InferenceServerClient, InferInput
@@ -43,23 +39,19 @@ class TritonRemoteModel:
 
             def create_input_placeholders() -> typing.List[InferInput]:
                 return [
-                    InferInput(i['name'], [int(s) for s in i["shape"]], i['datatype'])
-                    for i in self.metadata['inputs']
-                ]
+                    InferInput(i['name'], [int(s) for s in i["shape"]], i['datatype']) for i in self.metadata['inputs']]
 
         self._create_input_placeholders_fn = create_input_placeholders
 
     @property
     def runtime(self):
-        """Returns the model runtime."""
+        """Returns the model runtime"""
         return self.metadata.get("backend", self.metadata.get("platform"))
 
     def __call__(self, *args, **kwargs) -> typing.Union[torch.Tensor, typing.Tuple[torch.Tensor, ...]]:
-        """
-        Invokes the model.
-
-        Parameters can be provided via args or kwargs. args, if provided, are assumed to match the order of
-        inputs of the model. kwargs are matched with the model input names.
+        """ Invokes the model. Parameters can be provided via args or kwargs.
+        args, if provided, are assumed to match the order of inputs of the model.
+        kwargs are matched with the model input names.
         """
         inputs = self._create_inputs(*args, **kwargs)
         response = self.client.infer(model_name=self.model_name, inputs=inputs)

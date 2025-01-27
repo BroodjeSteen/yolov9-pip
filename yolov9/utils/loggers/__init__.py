@@ -5,6 +5,7 @@ from pathlib import Path
 import pkg_resources as pkg
 import torch
 from torch.utils.tensorboard import SummaryWriter
+
 from utils.general import LOGGER, colorstr, cv2
 from utils.loggers.clearml.clearml_utils import ClearmlLogger
 from utils.loggers.wandb.wandb_utils import WandbLogger
@@ -71,8 +72,7 @@ class Loggers():
             'val/dfl_loss',  # val loss
             'x/lr0',
             'x/lr1',
-            'x/lr2'
-        ]  # params
+            'x/lr2']  # params
         self.best_keys = ['best/epoch', 'best/precision', 'best/recall', 'best/mAP_0.5', 'best/mAP_0.5:0.95']
         for k in LOGGERS:
             setattr(self, k, None)  # init empty logger dictionary
@@ -95,16 +95,13 @@ class Loggers():
         s = self.save_dir
         if 'tb' in self.include and not self.opt.evolve:
             prefix = colorstr('TensorBoard: ')
-            self.logger.info(
-                f"{prefix}Start with 'tensorboard --logdir {s.parent}', view at http://localhost:6006/")
+            self.logger.info(f"{prefix}Start with 'tensorboard --logdir {s.parent}', view at http://localhost:6006/")
             self.tb = SummaryWriter(str(s))
 
         # W&B
         if wandb and 'wandb' in self.include:
-            wandb_artifact_resume = isinstance(self.opt.resume,
-                                               str) and self.opt.resume.startswith('wandb-artifact://')
-            run_id = torch.load(
-                self.weights).get('wandb_id') if self.opt.resume and not wandb_artifact_resume else None
+            wandb_artifact_resume = isinstance(self.opt.resume, str) and self.opt.resume.startswith('wandb-artifact://')
+            run_id = torch.load(self.weights).get('wandb_id') if self.opt.resume and not wandb_artifact_resume else None
             self.opt.hyp = self.hyp  # add hyperparameters
             self.wandb = WandbLogger(self.opt, run_id)
             # temp warn. because nested artifacts not supported after 0.12.10
@@ -178,8 +175,7 @@ class Loggers():
             if ni == 10 and (self.wandb or self.clearml):
                 files = sorted(self.save_dir.glob('train*.jpg'))
                 if self.wandb:
-                    self.wandb.log(
-                        {'Mosaics': [wandb.Image(str(f), caption=f.name) for f in files if f.exists()]})
+                    self.wandb.log({'Mosaics': [wandb.Image(str(f), caption=f.name) for f in files if f.exists()]})
                 if self.clearml:
                     self.clearml.log_debug_samples(files, title='Mosaics')
 
@@ -227,8 +223,7 @@ class Loggers():
         if self.csv:
             file = self.save_dir / 'results.csv'
             n = len(x) + 1  # number of cols
-            s = '' if file.exists() else (
-                ('%20s,' * n % tuple(['epoch'] + self.keys)).rstrip(',') + '\n')  # add header
+            s = '' if file.exists() else (('%20s,' * n % tuple(['epoch'] + self.keys)).rstrip(',') + '\n')  # add header
             with open(file, 'a') as f:
                 f.write(s + ('%20.5g,' * n % tuple([epoch] + vals)).rstrip(',') + '\n')
 
@@ -261,8 +256,9 @@ class Loggers():
             if self.wandb:
                 self.wandb.log_model(last.parent, self.opt, epoch, fi, best_model=best_fitness == fi)
             if self.clearml:
-                self.clearml.task.update_output_model(
-                    model_path=str(last), model_name='Latest Model', auto_delete_file=False)
+                self.clearml.task.update_output_model(model_path=str(last),
+                                                      model_name='Latest Model',
+                                                      auto_delete_file=False)
 
         if self.comet_logger:
             self.comet_logger.on_model_save(last, epoch, final_epoch, best_fitness, fi)
@@ -284,16 +280,16 @@ class Loggers():
             self.wandb.log({"Results": [wandb.Image(str(f), caption=f.name) for f in files]})
             # Calling wandb.log. TODO: Refactor this into WandbLogger.log_model
             if not self.opt.evolve:
-                wandb.log_artifact(
-                    str(best if best.exists() else last),
-                    type='model',
-                    name=f'run_{self.wandb.wandb_run.id}_model',
-                    aliases=['latest', 'best', 'stripped'])
+                wandb.log_artifact(str(best if best.exists() else last),
+                                   type='model',
+                                   name=f'run_{self.wandb.wandb_run.id}_model',
+                                   aliases=['latest', 'best', 'stripped'])
             self.wandb.finish_run()
 
         if self.clearml and not self.opt.evolve:
-            self.clearml.task.update_output_model(
-                model_path=str(best if best.exists() else last), name='Best Model', auto_delete_file=False)
+            self.clearml.task.update_output_model(model_path=str(best if best.exists() else last),
+                                                  name='Best Model',
+                                                  auto_delete_file=False)
 
         if self.comet_logger:
             final_results = dict(zip(self.keys[3:10], results))
@@ -326,15 +322,13 @@ class GenericLogger:
         if 'tb' in self.include:
             prefix = colorstr('TensorBoard: ')
             self.console_logger.info(
-                f"{prefix}Start with 'tensorboard --logdir {self.save_dir.parent}', view at http://localhost:6006/"
-            )
+                f"{prefix}Start with 'tensorboard --logdir {self.save_dir.parent}', view at http://localhost:6006/")
             self.tb = SummaryWriter(str(self.save_dir))
 
         if wandb and 'wandb' in self.include:
-            self.wandb = wandb.init(
-                project=web_project_name(str(opt.project)),
-                name=None if opt.name == "exp" else opt.name,
-                config=opt)
+            self.wandb = wandb.init(project=web_project_name(str(opt.project)),
+                                    name=None if opt.name == "exp" else opt.name,
+                                    config=opt)
         else:
             self.wandb = None
 
@@ -343,8 +337,7 @@ class GenericLogger:
         if self.csv:
             keys, vals = list(metrics.keys()), list(metrics.values())
             n = len(metrics) + 1  # number of cols
-            s = '' if self.csv.exists() else (
-                ('%23s,' * n % tuple(['epoch'] + keys)).rstrip(',') + '\n')  # header
+            s = '' if self.csv.exists() else (('%23s,' * n % tuple(['epoch'] + keys)).rstrip(',') + '\n')  # header
             with open(self.csv, 'a') as f:
                 f.write(s + ('%23.5g,' * n % tuple([epoch] + vals)).rstrip(',') + '\n')
 
@@ -380,7 +373,7 @@ class GenericLogger:
             wandb.log_artifact(art)
 
     def update_params(self, params):
-        # Update the parameters logged
+        # Update the paramters logged
         if self.wandb:
             wandb.run.config.update(params, allow_val_change=True)
 
@@ -390,8 +383,7 @@ def log_tensorboard_graph(tb, model, imgsz=(640, 640)):
     try:
         p = next(model.parameters())  # for device, type
         imgsz = (imgsz, imgsz) if isinstance(imgsz, int) else imgsz  # expand
-        im = torch.zeros(
-            (1, 3, *imgsz)).to(p.device).type_as(p)  # input image (WARNING: must be zeros, not empty)
+        im = torch.zeros((1, 3, *imgsz)).to(p.device).type_as(p)  # input image (WARNING: must be zeros, not empty)
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')  # suppress jit trace warning
             tb.add_graph(torch.jit.trace(de_parallel(model), im, strict=False), [])

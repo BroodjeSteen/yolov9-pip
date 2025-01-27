@@ -57,12 +57,11 @@ class ComputeLoss:
 
             n = b.shape[0]  # number of targets
             if n:
-                pxy, pwh, _, pcls, pmask = pi[b, a, gj, gi].split((2, 2, 1, self.nc, nm),
-                                                                  1)  # subset of predictions
+                pxy, pwh, _, pcls, pmask = pi[b, a, gj, gi].split((2, 2, 1, self.nc, nm), 1)  # subset of predictions
 
                 # Box regression
                 pxy = pxy.sigmoid() * 2 - 0.5
-                pwh = (pwh.sigmoid() * 2)**2 * anchors[i]
+                pwh = (pwh.sigmoid() * 2) ** 2 * anchors[i]
                 pbox = torch.cat((pxy, pwh), 1)  # predicted box
                 iou = bbox_iou(pbox, tbox[i], CIoU=True).squeeze()  # iou(prediction, target)
                 lbox += (1.0 - iou).mean()  # iou loss
@@ -86,8 +85,7 @@ class ComputeLoss:
                 if tuple(masks.shape[-2:]) != (mask_h, mask_w):  # downsample
                     masks = F.interpolate(masks[None], (mask_h, mask_w), mode="nearest")[0]
                 marea = xywhn[i][:, 2:].prod(1)  # mask width, height normalized
-                mxyxy = xywh2xyxy(
-                    xywhn[i] * torch.tensor([mask_w, mask_h, mask_w, mask_h], device=self.device))
+                mxyxy = xywh2xyxy(xywhn[i] * torch.tensor([mask_w, mask_h, mask_w, mask_h], device=self.device))
                 for bi in b.unique():
                     j = b == bi  # matching index
                     if self.overlap:
@@ -113,8 +111,7 @@ class ComputeLoss:
 
     def single_mask_loss(self, gt_mask, pred, proto, xyxy, area):
         # Mask loss for one image
-        pred_mask = (pred @ proto.view(self.nm, -1)).view(
-            -1, *proto.shape[1:])  # (n,32) @ (32,80,80) -> (n,80,80)
+        pred_mask = (pred @ proto.view(self.nm, -1)).view(-1, *proto.shape[1:])  # (n,32) @ (32,80,80) -> (n,80,80)
         loss = F.binary_cross_entropy_with_logits(pred_mask, gt_mask, reduction="none")
         return (crop_mask(loss, xyxy).mean(dim=(1, 2)) / area).mean()
 
@@ -123,20 +120,17 @@ class ComputeLoss:
         na, nt = self.na, targets.shape[0]  # number of anchors, targets
         tcls, tbox, indices, anch, tidxs, xywhn = [], [], [], [], [], []
         gain = torch.ones(8, device=self.device)  # normalized to gridspace gain
-        ai = torch.arange(
-            na, device=self.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
+        ai = torch.arange(na, device=self.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
         if self.overlap:
             batch = p[0].shape[0]
             ti = []
             for i in range(batch):
                 num = (targets[:, 0] == i).sum()  # find number of targets of each image
-                ti.append(
-                    torch.arange(num, device=self.device).float().view(1, num).repeat(na, 1) + 1)  # (na, num)
+                ti.append(torch.arange(num, device=self.device).float().view(1, num).repeat(na, 1) + 1)  # (na, num)
             ti = torch.cat(ti, 1)  # (na, nt)
         else:
             ti = torch.arange(nt, device=self.device).float().view(1, nt).repeat(na, 1)
-        targets = torch.cat((targets.repeat(na, 1, 1), ai[..., None], ti[..., None]),
-                            2)  # append anchor indices
+        targets = torch.cat((targets.repeat(na, 1, 1), ai[..., None], ti[..., None]), 2)  # append anchor indices
 
         g = 0.5  # bias
         off = torch.tensor(
@@ -182,8 +176,7 @@ class ComputeLoss:
             gi, gj = gij.T  # grid indices
 
             # Append
-            indices.append((b, a, gj.clamp_(0, shape[2] - 1), gi.clamp_(0,
-                                                                        shape[3] - 1)))  # image, anchor, grid
+            indices.append((b, a, gj.clamp_(0, shape[2] - 1), gi.clamp_(0, shape[3] - 1)))  # image, anchor, grid
             tbox.append(torch.cat((gxy - gij, gwh), 1))  # box
             anch.append(anchors[a])  # anchors
             tcls.append(c)  # class

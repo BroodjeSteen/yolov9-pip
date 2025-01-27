@@ -1,6 +1,6 @@
 # YOLOv5 🚀 by Ultralytics, GPL-3.0 license
 """
-Train a YOLOv5 classifier model on a classification dataset.
+Train a YOLOv5 classifier model on a classification dataset
 
 Usage - Single-GPU training:
     $ python classify/train.py --model yolov5s-cls.pt --data imagenette160 --epochs 5 --img 224
@@ -40,33 +40,12 @@ from classify import val as validate
 from models.experimental import attempt_load
 from models.yolo import ClassificationModel, DetectionModel
 from utils.dataloaders import create_classification_dataloader
-from utils.general import (
-    DATASETS_DIR,
-    LOGGER,
-    TQDM_BAR_FORMAT,
-    WorkingDirectory,
-    check_git_info,
-    check_git_status,
-    check_requirements,
-    colorstr,
-    download,
-    increment_path,
-    init_seeds,
-    print_args,
-    yaml_save,
-)
+from utils.general import (DATASETS_DIR, LOGGER, TQDM_BAR_FORMAT, WorkingDirectory, check_git_info, check_git_status,
+                           check_requirements, colorstr, download, increment_path, init_seeds, print_args, yaml_save)
 from utils.loggers import GenericLogger
 from utils.plots import imshow_cls
-from utils.torch_utils import (
-    ModelEMA,
-    model_info,
-    reshape_classifier_output,
-    select_device,
-    smart_DDP,
-    smart_optimizer,
-    smartCrossEntropyLoss,
-    torch_distributed_zero_first,
-)
+from utils.torch_utils import (ModelEMA, model_info, reshape_classifier_output, select_device, smart_DDP,
+                               smart_optimizer, smartCrossEntropyLoss, torch_distributed_zero_first)
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -108,26 +87,23 @@ def train(opt, device):
 
     # Dataloaders
     nc = len([x for x in (data_dir / 'train').glob('*') if x.is_dir()])  # number of classes
-    trainloader = create_classification_dataloader(
-        path=data_dir / 'train',
-        imgsz=imgsz,
-        batch_size=bs // WORLD_SIZE,
-        augment=True,
-        cache=opt.cache,
-        rank=LOCAL_RANK,
-        workers=nw)
+    trainloader = create_classification_dataloader(path=data_dir / 'train',
+                                                   imgsz=imgsz,
+                                                   batch_size=bs // WORLD_SIZE,
+                                                   augment=True,
+                                                   cache=opt.cache,
+                                                   rank=LOCAL_RANK,
+                                                   workers=nw)
 
-    test_dir = data_dir / 'test' if (data_dir /
-                                     'test').exists() else data_dir / 'val'  # data/test or data/val
+    test_dir = data_dir / 'test' if (data_dir / 'test').exists() else data_dir / 'val'  # data/test or data/val
     if RANK in {-1, 0}:
-        testloader = create_classification_dataloader(
-            path=test_dir,
-            imgsz=imgsz,
-            batch_size=bs // WORLD_SIZE * 2,
-            augment=False,
-            cache=opt.cache,
-            rank=-1,
-            workers=nw)
+        testloader = create_classification_dataloader(path=test_dir,
+                                                      imgsz=imgsz,
+                                                      batch_size=bs // WORLD_SIZE * 2,
+                                                      augment=False,
+                                                      cache=opt.cache,
+                                                      rank=-1,
+                                                      workers=nw)
 
     # Model
     with torch_distributed_zero_first(LOCAL_RANK), WorkingDirectory(ROOT):
@@ -137,13 +113,10 @@ def train(opt, device):
             model = torchvision.models.__dict__[opt.model](weights='IMAGENET1K_V1' if pretrained else None)
         else:
             m = hub.list('ultralytics/yolov5')  # + hub.list('pytorch/vision')  # models
-            raise ModuleNotFoundError(
-                f'--model {opt.model} not found. Available models are: \n' + '\n'.join(m))
+            raise ModuleNotFoundError(f'--model {opt.model} not found. Available models are: \n' + '\n'.join(m))
         if isinstance(model, DetectionModel):
-            LOGGER.warning(
-                "WARNING ⚠️ pass YOLOv5 classifier model with '-cls' suffix, i.e. '--model yolov5s-cls.pt'")
-            model = ClassificationModel(
-                model=model, nc=nc, cutoff=opt.cutoff or 10)  # convert to classification model
+            LOGGER.warning("WARNING ⚠️ pass YOLOv5 classifier model with '-cls' suffix, i.e. '--model yolov5s-cls.pt'")
+            model = ClassificationModel(model=model, nc=nc, cutoff=opt.cutoff or 10)  # convert to classification model
         reshape_classifier_output(model, nc)  # update class count
     for m in model.modules():
         if not pretrained and hasattr(m, 'reset_parameters'):
@@ -190,12 +163,11 @@ def train(opt, device):
     best_fitness = 0.0
     scaler = amp.GradScaler(enabled=cuda)
     val = test_dir.stem  # 'val' or 'test'
-    LOGGER.info(
-        f'Image sizes {imgsz} train, {imgsz} test\n'
-        f'Using {nw * WORLD_SIZE} dataloader workers\n'
-        f"Logging results to {colorstr('bold', save_dir)}\n"
-        f'Starting {opt.model} training on {data} dataset with {nc} classes for {epochs} epochs...\n\n'
-        f"{'Epoch':>10}{'GPU_mem':>10}{'train_loss':>12}{f'{val}_loss':>12}{'top1_acc':>12}{'top5_acc':>12}")
+    LOGGER.info(f'Image sizes {imgsz} train, {imgsz} test\n'
+                f'Using {nw * WORLD_SIZE} dataloader workers\n'
+                f"Logging results to {colorstr('bold', save_dir)}\n"
+                f'Starting {opt.model} training on {data} dataset with {nc} classes for {epochs} epochs...\n\n'
+                f"{'Epoch':>10}{'GPU_mem':>10}{'train_loss':>12}{f'{val}_loss':>12}{'top1_acc':>12}{'top5_acc':>12}")
     for epoch in range(epochs):  # loop over the dataset multiple times
         tloss, vloss, fitness = 0.0, 0.0, 0.0  # train loss, val loss, fitness
         model.train()
@@ -226,15 +198,15 @@ def train(opt, device):
             if RANK in {-1, 0}:
                 # Print
                 tloss = (tloss * i + loss.item()) / (i + 1)  # update mean losses
-                mem = '%.3gG' % (
-                    torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0)  # (GB)
+                mem = '%.3gG' % (torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0)  # (GB)
                 pbar.desc = f"{f'{epoch + 1}/{epochs}':>10}{mem:>10}{tloss:>12.3g}" + ' ' * 36
 
                 # Test
                 if i == len(pbar) - 1:  # last batch
-                    top1, top5, vloss = validate.run(
-                        model=ema.ema, dataloader=testloader, criterion=criterion,
-                        pbar=pbar)  # test accuracy, loss
+                    top1, top5, vloss = validate.run(model=ema.ema,
+                                                     dataloader=testloader,
+                                                     criterion=criterion,
+                                                     pbar=pbar)  # test accuracy, loss
                     fitness = top1  # define fitness as top1 accuracy
 
         # Scheduler
@@ -252,8 +224,7 @@ def train(opt, device):
                 f"{val}/loss": vloss,
                 "metrics/accuracy_top1": top1,
                 "metrics/accuracy_top5": top5,
-                "lr/0": optimizer.param_groups[0]['lr']
-            }  # learning rate
+                "lr/0": optimizer.param_groups[0]['lr']}  # learning rate
             logger.log_metrics(metrics, epoch)
 
             # Save model
@@ -268,8 +239,7 @@ def train(opt, device):
                     'optimizer': None,  # optimizer.state_dict(),
                     'opt': vars(opt),
                     'git': GIT_INFO,  # {remote, branch, commit} if a git repo
-                    'date': datetime.now().isoformat()
-                }
+                    'date': datetime.now().isoformat()}
 
                 # Save last, best and delete
                 torch.save(ckpt, last)
@@ -279,14 +249,13 @@ def train(opt, device):
 
     # Train complete
     if RANK in {-1, 0} and final_epoch:
-        LOGGER.info(
-            f'\nTraining complete ({(time.time() - t0) / 3600:.3f} hours)'
-            f"\nResults saved to {colorstr('bold', save_dir)}"
-            f"\nPredict:         python classify/predict.py --weights {best} --source im.jpg"
-            f"\nValidate:        python classify/val.py --weights {best} --data {data_dir}"
-            f"\nExport:          python export.py --weights {best} --include onnx"
-            f"\nPyTorch Hub:     model = torch.hub.load('ultralytics/yolov5', 'custom', '{best}')"
-            f"\nVisualize:       https://netron.app\n")
+        LOGGER.info(f'\nTraining complete ({(time.time() - t0) / 3600:.3f} hours)'
+                    f"\nResults saved to {colorstr('bold', save_dir)}"
+                    f"\nPredict:         python classify/predict.py --weights {best} --source im.jpg"
+                    f"\nValidate:        python classify/val.py --weights {best} --data {data_dir}"
+                    f"\nExport:          python export.py --weights {best} --include onnx"
+                    f"\nPyTorch Hub:     model = torch.hub.load('ultralytics/yolov5', 'custom', '{best}')"
+                    f"\nVisualize:       https://netron.app\n")
 
         # Plot examples
         images, labels = (x[:25] for x in next(iter(testloader)))  # first 25 images and labels
@@ -302,35 +271,27 @@ def train(opt, device):
 def parse_opt(known=False):
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, default='yolov5s-cls.pt', help='initial weights path')
-    parser.add_argument(
-        '--data', type=str, default='imagenette160', help='cifar10, cifar100, mnist, imagenet, ...')
+    parser.add_argument('--data', type=str, default='imagenette160', help='cifar10, cifar100, mnist, imagenet, ...')
     parser.add_argument('--epochs', type=int, default=10, help='total training epochs')
     parser.add_argument('--batch-size', type=int, default=64, help='total batch size for all GPUs')
-    parser.add_argument(
-        '--imgsz', '--img', '--img-size', type=int, default=224, help='train, val image size (pixels)')
+    parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=224, help='train, val image size (pixels)')
     parser.add_argument('--nosave', action='store_true', help='only save final checkpoint')
-    parser.add_argument(
-        '--cache', type=str, nargs='?', const='ram', help='--cache images in "ram" (default) or "disk"')
+    parser.add_argument('--cache', type=str, nargs='?', const='ram', help='--cache images in "ram" (default) or "disk"')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument(
-        '--workers', type=int, default=8, help='max dataloader workers (per RANK in DDP mode)')
+    parser.add_argument('--workers', type=int, default=8, help='max dataloader workers (per RANK in DDP mode)')
     parser.add_argument('--project', default=ROOT / 'runs/train-cls', help='save to project/name')
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
-    parser.add_argument(
-        '--pretrained', nargs='?', const=True, default=True, help='start from i.e. --pretrained False')
-    parser.add_argument(
-        '--optimizer', choices=['SGD', 'Adam', 'AdamW', 'RMSProp'], default='Adam', help='optimizer')
+    parser.add_argument('--pretrained', nargs='?', const=True, default=True, help='start from i.e. --pretrained False')
+    parser.add_argument('--optimizer', choices=['SGD', 'Adam', 'AdamW', 'RMSProp'], default='Adam', help='optimizer')
     parser.add_argument('--lr0', type=float, default=0.001, help='initial learning rate')
     parser.add_argument('--decay', type=float, default=5e-5, help='weight decay')
     parser.add_argument('--label-smoothing', type=float, default=0.1, help='Label smoothing epsilon')
-    parser.add_argument(
-        '--cutoff', type=int, default=None, help='Model layer cutoff index for Classify() head')
+    parser.add_argument('--cutoff', type=int, default=None, help='Model layer cutoff index for Classify() head')
     parser.add_argument('--dropout', type=float, default=None, help='Dropout (fraction)')
     parser.add_argument('--verbose', action='store_true', help='Verbose mode')
     parser.add_argument('--seed', type=int, default=0, help='Global training seed')
-    parser.add_argument(
-        '--local_rank', type=int, default=-1, help='Automatic DDP Multi-GPU argument, do not modify')
+    parser.add_argument('--local_rank', type=int, default=-1, help='Automatic DDP Multi-GPU argument, do not modify')
     return parser.parse_known_args()[0] if known else parser.parse_args()
 
 

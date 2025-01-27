@@ -1,4 +1,5 @@
 import torch
+
 from utils.general import check_version
 
 TORCH_1_10 = check_version(torch.__version__, '1.10.0')
@@ -34,5 +35,4 @@ def dist2bbox(distance, anchor_points, xywh=True, dim=-1):
 def bbox2dist(anchor_points, bbox, reg_max):
     """Transform bbox(xyxy) to dist(ltrb)."""
     x1y1, x2y2 = torch.split(bbox, 2, -1)
-    return torch.cat((anchor_points - x1y1, x2y2 - anchor_points),
-                     -1).clamp(0, reg_max - 0.01)  # dist (lt, rb)
+    return torch.cat((anchor_points - x1y1, x2y2 - anchor_points), -1).clamp(0, reg_max - 0.01)  # dist (lt, rb)

@@ -44,19 +44,8 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 from models.common import DetectMultiBackend
 from utils.augmentations import classify_transforms
 from utils.dataloaders import IMG_FORMATS, VID_FORMATS, LoadImages, LoadScreenshots, LoadStreams
-from utils.general import (
-    LOGGER,
-    Profile,
-    check_file,
-    check_img_size,
-    check_imshow,
-    check_requirements,
-    colorstr,
-    cv2,
-    increment_path,
-    print_args,
-    strip_optimizer,
-)
+from utils.general import (LOGGER, Profile, check_file, check_img_size, check_imshow, check_requirements, colorstr, cv2,
+                           increment_path, print_args, strip_optimizer)
 from utils.plots import Annotator
 from utils.torch_utils import select_device, smart_inference_mode
 
@@ -104,14 +93,12 @@ def run(
     bs = 1  # batch_size
     if webcam:
         view_img = check_imshow(warn=True)
-        dataset = LoadStreams(
-            source, img_size=imgsz, transforms=classify_transforms(imgsz[0]), vid_stride=vid_stride)
+        dataset = LoadStreams(source, img_size=imgsz, transforms=classify_transforms(imgsz[0]), vid_stride=vid_stride)
         bs = len(dataset)
     elif screenshot:
         dataset = LoadScreenshots(source, img_size=imgsz, stride=stride, auto=pt)
     else:
-        dataset = LoadImages(
-            source, img_size=imgsz, transforms=classify_transforms(imgsz[0]), vid_stride=vid_stride)
+        dataset = LoadImages(source, img_size=imgsz, transforms=classify_transforms(imgsz[0]), vid_stride=vid_stride)
     vid_path, vid_writer = [None] * bs, [None] * bs
 
     # Run inference
@@ -143,8 +130,7 @@ def run(
 
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # im.jpg
-            txt_path = str(save_dir / 'labels' / p.stem) + (
-                '' if dataset.mode == 'image' else f'_{frame}')  # im.txt
+            txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # im.txt
 
             s += '%gx%g ' % im.shape[2:]  # print string
             annotator = Annotator(im0, example=str(names), pil=True)
@@ -166,8 +152,7 @@ def run(
             if view_img:
                 if platform.system() == 'Linux' and p not in windows:
                     windows.append(p)
-                    cv2.namedWindow(
-                        str(p), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
+                    cv2.namedWindow(str(p), cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)  # allow window resize (Linux)
                     cv2.resizeWindow(str(p), im0.shape[1], im0.shape[0])
                 cv2.imshow(str(p), im0)
                 cv2.waitKey(1)  # 1 millisecond
@@ -187,10 +172,8 @@ def run(
                             h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                         else:  # stream
                             fps, w, h = 30, im0.shape[1], im0.shape[0]
-                        save_path = str(
-                            Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
-                        vid_writer[i] = cv2.VideoWriter(
-                            save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+                        save_path = str(Path(save_path).with_suffix('.mp4'))  # force *.mp4 suffix on results videos
+                        vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer[i].write(im0)
 
         # Print time (inference-only)
@@ -198,8 +181,7 @@ def run(
 
     # Print results
     t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
-    LOGGER.info(
-        f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
+    LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
         LOGGER.info(f"Results saved to {colorstr('bold', save_dir)}{s}")
@@ -209,14 +191,10 @@ def run(
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--weights', nargs='+', type=str, default=ROOT / 'yolov5s-cls.pt', help='model path(s)')
-    parser.add_argument(
-        '--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
-    parser.add_argument(
-        '--data', type=str, default=ROOT / 'data/coco128.yaml', help='(optional) dataset.yaml path')
-    parser.add_argument(
-        '--imgsz', '--img', '--img-size', nargs='+', type=int, default=[224], help='inference size h,w')
+    parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'yolov5s-cls.pt', help='model path(s)')
+    parser.add_argument('--source', type=str, default=ROOT / 'data/images', help='file/dir/URL/glob/screen/0(webcam)')
+    parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='(optional) dataset.yaml path')
+    parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[224], help='inference size h,w')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='show results')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')

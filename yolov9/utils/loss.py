@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from utils.metrics import bbox_iou
 from utils.torch_utils import de_parallel
 
@@ -46,7 +47,7 @@ class FocalLoss(nn.Module):
         pred_prob = torch.sigmoid(pred)  # prob from logits
         p_t = true * pred_prob + (1 - true) * (1 - pred_prob)
         alpha_factor = true * self.alpha + (1 - true) * (1 - self.alpha)
-        modulating_factor = (1.0 - p_t)**self.gamma
+        modulating_factor = (1.0 - p_t) ** self.gamma
         loss *= alpha_factor * modulating_factor
 
         if self.reduction == 'mean':
@@ -72,7 +73,7 @@ class QFocalLoss(nn.Module):
 
         pred_prob = torch.sigmoid(pred)  # prob from logits
         alpha_factor = true * self.alpha + (1 - true) * (1 - self.alpha)
-        modulating_factor = torch.abs(true - pred_prob)**self.gamma
+        modulating_factor = torch.abs(true - pred_prob) ** self.gamma
         loss *= alpha_factor * modulating_factor
 
         if self.reduction == 'mean':
@@ -120,14 +121,12 @@ class ComputeLoss:
         # Losses
         for i, pi in enumerate(p):  # layer index, layer predictions
             b, gj, gi = indices[i]  # image, anchor, gridy, gridx
-            tobj = torch.zeros((pi.shape[0], pi.shape[2], pi.shape[3]), dtype=pi.dtype,
-                               device=self.device)  # tgt obj
+            tobj = torch.zeros((pi.shape[0], pi.shape[2], pi.shape[3]), dtype=pi.dtype, device=self.device)  # tgt obj
 
             n_labels = b.shape[0]  # number of labels
             if n_labels:
                 # pxy, pwh, _, pcls = pi[b, a, gj, gi].tensor_split((2, 4, 5), dim=1)  # faster, requires torch 1.8.0
-                pxy, pwh, _, pcls = pi[b, :, gj, gi].split((2, 2, 1, self.nc),
-                                                           1)  # target-subset of predictions
+                pxy, pwh, _, pcls = pi[b, :, gj, gi].split((2, 2, 1, self.nc), 1)  # target-subset of predictions
 
                 # Regression
                 # pwh = (pwh.sigmoid() * 2) ** 2 * anchors[i]
@@ -219,8 +218,7 @@ class ComputeLoss:
             gi, gj = gij.T  # grid indices
 
             # Append
-            indices.append(
-                (b, gj.clamp_(0, shape[2] - 1), gi.clamp_(0, shape[3] - 1)))  # image, grid_y, grid_x indices
+            indices.append((b, gj.clamp_(0, shape[2] - 1), gi.clamp_(0, shape[3] - 1)))  # image, grid_y, grid_x indices
             tbox.append(torch.cat((gxy - gij, gwh), 1))  # box
             tcls.append(c)  # class
 
@@ -268,20 +266,18 @@ class ComputeLoss_NEW:
         for i, pi in enumerate(p):  # layer index, layer predictions
             b, gj, gi = indices[i]  # image, anchor, gridy, gridx
             if n_labels:
-                pxy, pwh, pobj, pcls = pi[b, :, gj, gi].split((2, 2, 1, self.nc),
-                                                              2)  # target-subset of predictions
+                pxy, pwh, pobj, pcls = pi[b, :, gj, gi].split((2, 2, 1, self.nc), 2)  # target-subset of predictions
 
                 # Regression
-                pbox = torch.cat((pxy.sigmoid() * 1.6 - 0.3, (0.2 + pwh.sigmoid() * 4.8) * self.anchors[i]),
-                                 2)
+                pbox = torch.cat((pxy.sigmoid() * 1.6 - 0.3, (0.2 + pwh.sigmoid() * 4.8) * self.anchors[i]), 2)
                 iou = bbox_iou(pbox, tbox[i], CIoU=True).squeeze()  # iou(predicted_box, target_box)
                 obj_target = iou.detach().clamp(0).type(pi.dtype)  # objectness targets
 
                 all_loss.append([(1.0 - iou) * self.hyp['box'],
                                  self.BCE_base(pobj.squeeze(), torch.ones_like(obj_target)) * self.hyp['obj'],
-                                 self.BCE_base(pcls,
-                                               F.one_hot(tcls[i], self.nc).float()).mean(2) * self.hyp['cls'],
-                                 obj_target, tbox[i][..., 2] > 0.0])  # valid
+                                 self.BCE_base(pcls, F.one_hot(tcls[i], self.nc).float()).mean(2) * self.hyp['cls'],
+                                 obj_target,
+                                 tbox[i][..., 2] > 0.0])  # valid
 
         # Lowest 3 losses per label
         n_assign = 4  # top n matches
@@ -297,8 +293,7 @@ class ComputeLoss_NEW:
         # Obj loss
         for i, (h, pi) in enumerate(zip(ij.chunk(self.nl, 1), p)):  # layer index, layer predictions
             b, gj, gi = indices[i]  # image, anchor, gridy, gridx
-            tobj = torch.zeros((pi.shape[0], pi.shape[2], pi.shape[3]), dtype=pi.dtype,
-                               device=self.device)  # obj
+            tobj = torch.zeros((pi.shape[0], pi.shape[2], pi.shape[3]), dtype=pi.dtype, device=self.device)  # obj
             if n_labels:  # if any labels
                 tobj[b[h], gj[h], gi[h]] = all_loss[i][3][h]
             loss[1] += self.BCEobj(pi[:, 4], tobj) * (self.balance[i] * self.hyp['obj'])
@@ -356,8 +351,7 @@ class ComputeLoss_NEW:
             gi, gj = gij.transpose(0, 2).contiguous()  # grid indices
 
             # Append
-            indices.append(
-                (b, gj.clamp_(0, shape[2] - 1), gi.clamp_(0, shape[3] - 1)))  # image, grid_y, grid_x indices
+            indices.append((b, gj.clamp_(0, shape[2] - 1), gi.clamp_(0, shape[3] - 1)))  # image, grid_y, grid_x indices
             tbox.append(torch.cat((gxy - gij, gwh), 2).permute(1, 0, 2).contiguous())  # box
             tcls.append(c)  # class
 

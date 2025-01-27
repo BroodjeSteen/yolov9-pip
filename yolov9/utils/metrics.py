@@ -5,6 +5,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+
 from utils import TryExcept, threaded
 
 
@@ -23,9 +24,7 @@ def smooth(y, f=0.05):
 
 
 def ap_per_class(tp, conf, pred_cls, target_cls, plot=False, save_dir='.', names=(), eps=1e-16, prefix=""):
-    """
-    Compute the average precision, given the recall and precision curves.
-
+    """ Compute the average precision, given the recall and precision curves.
     Source: https://github.com/rafaelpadilla/Object-Detection-Metrics.
     # Arguments
         tp:  True positives (nparray, nx1 or nx10).
@@ -130,7 +129,6 @@ class ConfusionMatrix:
     def process_batch(self, detections, labels):
         """
         Return intersection-over-union (Jaccard index) of boxes.
-
         Both sets of boxes are expected to be in (x1, y1, x2, y2) format.
         Arguments:
             detections (Array[N, 6]), x1, y1, x2, y2, conf, class
@@ -187,8 +185,7 @@ class ConfusionMatrix:
     def plot(self, normalize=True, save_dir='', names=()):
         import seaborn as sn
 
-        array = self.matrix / (
-            (self.matrix.sum(0).reshape(1, -1) + 1E-9) if normalize else 1)  # normalize columns
+        array = self.matrix / ((self.matrix.sum(0).reshape(1, -1) + 1E-9) if normalize else 1)  # normalize columns
         array[array < 0.005] = np.nan  # don't annotate (would appear as 0.00)
 
         fig, ax = plt.subplots(1, 1, figsize=(12, 9), tight_layout=True)
@@ -198,19 +195,17 @@ class ConfusionMatrix:
         ticklabels = (names + ['background']) if labels else "auto"
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')  # suppress empty matrix RuntimeWarning: All-NaN slice encountered
-            sn.heatmap(
-                array,
-                ax=ax,
-                annot=nc < 30,
-                annot_kws={
-                    "size": 8
-                },
-                cmap='Blues',
-                fmt='.2f',
-                square=True,
-                vmin=0.0,
-                xticklabels=ticklabels,
-                yticklabels=ticklabels).set_facecolor((1, 1, 1))
+            sn.heatmap(array,
+                       ax=ax,
+                       annot=nc < 30,
+                       annot_kws={
+                           "size": 8},
+                       cmap='Blues',
+                       fmt='.2f',
+                       square=True,
+                       vmin=0.0,
+                       xticklabels=ticklabels,
+                       yticklabels=ticklabels).set_facecolor((1, 1, 1))
         ax.set_ylabel('True')
         ax.set_ylabel('Predicted')
         ax.set_title('Confusion Matrix')
@@ -220,7 +215,7 @@ class ConfusionMatrix:
     def print(self):
         for i in range(self.nc + 1):
             print(' '.join(map(str, self.matrix[i])))
-
+            
 
 class WIoU_Scale:
     ''' monotonous: {
@@ -229,21 +224,21 @@ class WIoU_Scale:
             False: non-monotonic FM v3
         }
         momentum: The momentum of running mean'''
-
+    
     iou_mean = 1.
     monotonous = False
-    _momentum = 1 - 0.5**(1 / 7000)
+    _momentum = 1 - 0.5 ** (1 / 7000)
     _is_train = True
 
     def __init__(self, iou):
         self.iou = iou
         self._update(self)
-
+    
     @classmethod
     def _update(cls, self):
-        if cls._is_train:            cls.iou_mean = (1 - cls._momentum) * cls.iou_mean + \
-cls._momentum * self.iou.detach().mean().item()
-
+        if cls._is_train: cls.iou_mean = (1 - cls._momentum) * cls.iou_mean + \
+                                         cls._momentum * self.iou.detach().mean().item()
+    
     @classmethod
     def _scaled_loss(cls, self, gamma=1.9, delta=3):
         if isinstance(self.monotonous, bool):
@@ -256,17 +251,7 @@ cls._momentum * self.iou.detach().mean().item()
         return 1
 
 
-def bbox_iou(
-        box1,
-        box2,
-        xywh=True,
-        GIoU=False,
-        DIoU=False,
-        CIoU=False,
-        MDPIoU=False,
-        feat_h=640,
-        feat_w=640,
-        eps=1e-7):
+def bbox_iou(box1, box2, xywh=True, GIoU=False, DIoU=False, CIoU=False, MDPIoU=False, feat_h=640, feat_w=640, eps=1e-7):
     # Returns Intersection over Union (IoU) of box1(1,4) to box2(n,4)
 
     # Get the coordinates of bounding boxes
@@ -294,11 +279,10 @@ def bbox_iou(
         cw = torch.max(b1_x2, b2_x2) - torch.min(b1_x1, b2_x1)  # convex (smallest enclosing box) width
         ch = torch.max(b1_y2, b2_y2) - torch.min(b1_y1, b2_y1)  # convex height
         if CIoU or DIoU:  # Distance or Complete IoU https://arxiv.org/abs/1911.08287v1
-            c2 = cw**2 + ch**2 + eps  # convex diagonal squared
-            rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2)**2 +
-                    (b2_y1 + b2_y2 - b1_y1 - b1_y2)**2) / 4  # center dist ** 2
+            c2 = cw ** 2 + ch ** 2 + eps  # convex diagonal squared
+            rho2 = ((b2_x1 + b2_x2 - b1_x1 - b1_x2) ** 2 + (b2_y1 + b2_y2 - b1_y1 - b1_y2) ** 2) / 4  # center dist ** 2
             if CIoU:  # https://github.com/Zzh-tju/DIoU-SSD-pytorch/blob/master/utils/box/box_utils.py#L47
-                v = (4 / math.pi**2) * torch.pow(torch.atan(w2 / h2) - torch.atan(w1 / h1), 2)
+                v = (4 / math.pi ** 2) * torch.pow(torch.atan(w2 / h2) - torch.atan(w1 / h1), 2)
                 with torch.no_grad():
                     alpha = v / (v - iou + (1 + eps))
                 return iou - (rho2 / c2 + v * alpha)  # CIoU
@@ -306,9 +290,9 @@ def bbox_iou(
         c_area = cw * ch + eps  # convex area
         return iou - (c_area - union) / c_area  # GIoU https://arxiv.org/pdf/1902.09630.pdf
     elif MDPIoU:
-        d1 = (b2_x1 - b1_x1)**2 + (b2_y1 - b1_y1)**2
-        d2 = (b2_x2 - b1_x2)**2 + (b2_y2 - b1_y2)**2
-        mpdiou_hw_pow = feat_h**2 + feat_w**2
+        d1 = (b2_x1 - b1_x1) ** 2 + (b2_y1 - b1_y1) ** 2
+        d2 = (b2_x2 - b1_x2) ** 2 + (b2_y2 - b1_y2) ** 2
+        mpdiou_hw_pow = feat_h ** 2 + feat_w ** 2
         return iou - d1 / mpdiou_hw_pow - d2 / mpdiou_hw_pow  # MPDIoU
     return iou  # IoU
 
@@ -317,7 +301,6 @@ def box_iou(box1, box2, eps=1e-7):
     # https://github.com/pytorch/vision/blob/master/torchvision/ops/boxes.py
     """
     Return intersection-over-union (Jaccard index) of boxes.
-
     Both sets of boxes are expected to be in (x1, y1, x2, y2) format.
     Arguments:
         box1 (Tensor[N, 4])
@@ -336,10 +319,7 @@ def box_iou(box1, box2, eps=1e-7):
 
 
 def bbox_ioa(box1, box2, eps=1e-7):
-    """
-    Returns the intersection over box2 area given box1, box2.
-
-    Boxes are x1y1x2y2
+    """Returns the intersection over box2 area given box1, box2. Boxes are x1y1x2y2
     box1:       np.array of shape(nx4)
     box2:       np.array of shape(mx4)
     returns:    np.array of shape(nxm)

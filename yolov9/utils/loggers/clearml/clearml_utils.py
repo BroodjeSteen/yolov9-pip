@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import yaml
+
 from utils.plots import Annotator, colors
 
 try:
@@ -17,22 +18,20 @@ except (ImportError, AssertionError):
 
 
 def construct_dataset(clearml_info_string):
-    """Load in a clearml dataset and fill the internal data_dict with its contents."""
+    """Load in a clearml dataset and fill the internal data_dict with its contents.
+    """
     dataset_id = clearml_info_string.replace('clearml://', '')
     dataset = Dataset.get(dataset_id=dataset_id)
     dataset_root_path = Path(dataset.get_local_copy())
 
     # We'll search for the yaml file definition in the dataset
-    yaml_filenames = list(
-        glob.glob(str(dataset_root_path / "*.yaml")) + glob.glob(str(dataset_root_path / "*.yml")))
+    yaml_filenames = list(glob.glob(str(dataset_root_path / "*.yaml")) + glob.glob(str(dataset_root_path / "*.yml")))
     if len(yaml_filenames) > 1:
-        raise ValueError(
-            'More than one yaml file was found in the dataset root, cannot determine which one contains '
-            'the dataset definition this way.')
+        raise ValueError('More than one yaml file was found in the dataset root, cannot determine which one contains '
+                         'the dataset definition this way.')
     elif len(yaml_filenames) == 0:
-        raise ValueError(
-            'No yaml definition found in dataset root path, check that there is a correct yaml file '
-            'inside the dataset root path.')
+        raise ValueError('No yaml definition found in dataset root path, check that there is a correct yaml file '
+                         'inside the dataset root path.')
     with open(yaml_filenames[0]) as f:
         dataset_definition = yaml.safe_load(f)
 
@@ -54,15 +53,14 @@ def construct_dataset(clearml_info_string):
 
 
 class ClearmlLogger:
-    """
-    Log training runs, datasets, models, and predictions to ClearML.
+    """Log training runs, datasets, models, and predictions to ClearML.
 
-    This logger sends information to ClearML at app.clear.ml or to your own hosted server. By default, this
-    information includes hyperparameters, system configuration and metrics, model metrics, code information
-    and basic data metrics and analyses.
+    This logger sends information to ClearML at app.clear.ml or to your own hosted server. By default,
+    this information includes hyperparameters, system configuration and metrics, model metrics, code information and
+    basic data metrics and analyses.
 
-    By providing additional command line arguments to train.py, datasets, models and predictions can also be
-    logged.
+    By providing additional command line arguments to train.py, datasets,
+    models and predictions can also be logged.
     """
 
     def __init__(self, opt, hyp):
@@ -120,11 +118,10 @@ class ClearmlLogger:
             if f.exists():
                 it = re.search(r'_batch(\d+)', f.name)
                 iteration = int(it.groups()[0]) if it else 0
-                self.task.get_logger().report_image(
-                    title=title,
-                    series=f.name.replace(it.group(), ''),
-                    local_path=str(f),
-                    iteration=iteration)
+                self.task.get_logger().report_image(title=title,
+                                                    series=f.name.replace(it.group(), ''),
+                                                    local_path=str(f),
+                                                    iteration=iteration)
 
     def log_image_with_boxes(self, image_path, boxes, class_names, image, conf_threshold=0.25):
         """
@@ -139,8 +136,7 @@ class ClearmlLogger:
         if len(self.current_epoch_logged_images) < self.max_imgs_to_log_per_epoch and self.current_epoch >= 0:
             # Log every bbox_interval times and deduplicate for any intermittend extra eval runs
             if self.current_epoch % self.bbox_interval == 0 and image_path not in self.current_epoch_logged_images:
-                im = np.ascontiguousarray(
-                    np.moveaxis(image.mul(255).clamp(0, 255).byte().cpu().numpy(), 0, 2))
+                im = np.ascontiguousarray(np.moveaxis(image.mul(255).clamp(0, 255).byte().cpu().numpy(), 0, 2))
                 annotator = Annotator(im=im, pil=True)
                 for i, (conf, class_nr, box) in enumerate(zip(boxes[:, 4], boxes[:, 5], boxes[:, :4])):
                     color = colors(i)
@@ -154,9 +150,8 @@ class ClearmlLogger:
                         annotator.box_label(box.cpu().numpy(), label=label, color=color)
 
                 annotated_image = annotator.result()
-                self.task.get_logger().report_image(
-                    title='Bounding Boxes',
-                    series=image_path.name,
-                    iteration=self.current_epoch,
-                    image=annotated_image)
+                self.task.get_logger().report_image(title='Bounding Boxes',
+                                                    series=image_path.name,
+                                                    iteration=self.current_epoch,
+                                                    image=annotated_image)
                 self.current_epoch_logged_images.add(image_path)

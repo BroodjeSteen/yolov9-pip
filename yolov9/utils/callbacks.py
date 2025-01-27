@@ -2,7 +2,9 @@ import threading
 
 
 class Callbacks:
-    """" Handles all registered callbacks for YOLOv5 Hooks."""
+    """"
+    Handles all registered callbacks for YOLOv5 Hooks
+    """
 
     def __init__(self):
         # Define the available callbacks
@@ -25,13 +27,12 @@ class Callbacks:
             'on_model_save': [],
             'on_train_end': [],
             'on_params_update': [],
-            'teardown': [],
-        }
+            'teardown': [],}
         self.stop_training = False  # set True to interrupt training
 
     def register_action(self, hook, name='', callback=None):
         """
-        Register a new action to a callback hook.
+        Register a new action to a callback hook
 
         Args:
             hook: The callback hook name to register the action to
@@ -43,8 +44,8 @@ class Callbacks:
         self._callbacks[hook].append({'name': name, 'callback': callback})
 
     def get_registered_actions(self, hook=None):
-        """
-        " Returns all the registered actions by callback hook.
+        """"
+        Returns all the registered actions by callback hook
 
         Args:
             hook: The name of the hook to check, defaults to all
@@ -53,7 +54,7 @@ class Callbacks:
 
     def run(self, hook, *args, thread=False, **kwargs):
         """
-        Loop through the registered actions and fire all callbacks on main thread.
+        Loop through the registered actions and fire all callbacks on main thread
 
         Args:
             hook: The name of the hook to check, defaults to all

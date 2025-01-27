@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
+
 from utils.general import LOGGER, check_version, colorstr, resample_segments, segment2box, xywhn2xyxy
 from utils.metrics import bbox_ioa
 
@@ -30,10 +31,8 @@ class Albumentations:
                 A.CLAHE(p=0.01),
                 A.RandomBrightnessContrast(p=0.0),
                 A.RandomGamma(p=0.0),
-                A.ImageCompression(quality_lower=75, p=0.0)
-            ]  # transforms
-            self.transform = A.Compose(
-                T, bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels']))
+                A.ImageCompression(quality_lower=75, p=0.0)]  # transforms
+            self.transform = A.Compose(T, bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels']))
 
             LOGGER.info(prefix + ', '.join(f'{x}'.replace('always_apply=False, ', '') for x in T if x.p))
         except ImportError:  # package not installed, skip
@@ -104,8 +103,7 @@ def replicate(im, labels):
     return im, labels
 
 
-def letterbox(
-        im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleup=True, stride=32):
+def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleup=True, stride=32):
     # Resize and pad image while meeting stride-multiple constraints
     shape = im.shape[:2]  # current shape [height, width]
     if isinstance(new_shape, int):
@@ -138,16 +136,15 @@ def letterbox(
     return im, ratio, (dw, dh)
 
 
-def random_perspective(
-    im,
-    targets=(),
-    segments=(),
-    degrees=10,
-    translate=.1,
-    scale=.1,
-    shear=10,
-    perspective=0.0,
-    border=(0, 0)):
+def random_perspective(im,
+                       targets=(),
+                       segments=(),
+                       degrees=10,
+                       translate=.1,
+                       scale=.1,
+                       shear=10,
+                       perspective=0.0,
+                       border=(0, 0)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(0.1, 0.1), scale=(0.9, 1.1), shear=(-10, 10))
     # targets = [cls, xyxy]
 
@@ -216,8 +213,7 @@ def random_perspective(
             xy = np.ones((n * 4, 3))
             xy[:, :2] = targets[:, [1, 2, 3, 4, 1, 4, 3, 2]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
             xy = xy @ M.T  # transform
-            xy = (xy[:, :2] / xy[:, 2:3] if perspective else xy[:, :2]).reshape(
-                n, 8)  # perspective rescale or affine
+            xy = (xy[:, :2] / xy[:, 2:3] if perspective else xy[:, :2]).reshape(n, 8)  # perspective rescale or affine
 
             # create new boxes
             x = xy[:, [0, 2, 4, 6]]
@@ -301,8 +297,7 @@ def box_candidates(box1, box2, wh_thr=2, ar_thr=100, area_thr=0.1, eps=1e-16):  
     w1, h1 = box1[2] - box1[0], box1[3] - box1[1]
     w2, h2 = box2[2] - box2[0], box2[3] - box2[1]
     ar = np.maximum(w2 / (h2 + eps), h2 / (w2 + eps))  # aspect ratio
-    return (w2 > wh_thr) & (h2 > wh_thr) & (w2 * h2 /
-                                            (w1 * h1 + eps) > area_thr) & (ar < ar_thr)  # candidates
+    return (w2 > wh_thr) & (h2 > wh_thr) & (w2 * h2 / (w1 * h1 + eps) > area_thr) & (ar < ar_thr)  # candidates
 
 
 def classify_albumentations(
@@ -333,8 +328,7 @@ def classify_albumentations(
                 if vflip > 0:
                     T += [A.VerticalFlip(p=vflip)]
                 if jitter > 0:
-                    color_jitter = (
-                        float(jitter), ) * 3  # repeat value for brightness, contrast, satuaration, 0 hue
+                    color_jitter = (float(jitter),) * 3  # repeat value for brightness, contrast, satuaration, 0 hue
                     T += [A.ColorJitter(*color_jitter, 0)]
         else:  # Use fixed crop for eval set (reproducibility)
             T = [A.SmallestMaxSize(max_size=size), A.CenterCrop(height=size, width=size)]

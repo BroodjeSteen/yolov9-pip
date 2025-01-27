@@ -17,23 +17,9 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 from models.common import DetectMultiBackend
 from utils.callbacks import Callbacks
 from utils.dataloaders import create_dataloader
-from utils.general import (
-    LOGGER,
-    TQDM_BAR_FORMAT,
-    Profile,
-    check_dataset,
-    check_img_size,
-    check_requirements,
-    check_yaml,
-    coco80_to_coco91_class,
-    colorstr,
-    increment_path,
-    non_max_suppression,
-    print_args,
-    scale_boxes,
-    xywh2xyxy,
-    xyxy2xywh,
-)
+from utils.general import (LOGGER, TQDM_BAR_FORMAT, Profile, check_dataset, check_img_size, check_requirements,
+                           check_yaml, coco80_to_coco91_class, colorstr, increment_path, non_max_suppression,
+                           print_args, scale_boxes, xywh2xyxy, xyxy2xywh)
 from utils.metrics import ConfusionMatrix, ap_per_class, box_iou
 from utils.plots import output_to_target, plot_images, plot_val_study
 from utils.torch_utils import select_device, smart_inference_mode
@@ -59,8 +45,7 @@ def save_one_json(predn, jdict, path, class_map):
             'image_id': image_id,
             'category_id': class_map[int(p[5])],
             'bbox': [round(x, 3) for x in b],
-            'score': round(p[4], 5)
-        })
+            'score': round(p[4], 5)})
 
 
 def process_batch(detections, labels, iouv):
@@ -78,8 +63,7 @@ def process_batch(detections, labels, iouv):
     for i in range(len(iouv)):
         x = torch.where((iou >= iouv[i]) & correct_class)  # IoU > threshold and classes match
         if x[0].shape[0]:
-            matches = torch.cat((torch.stack(x, 1), iou[x[0], x[1]][:, None]),
-                                1).cpu().numpy()  # [label, detect, iou]
+            matches = torch.cat((torch.stack(x, 1), iou[x[0], x[1]][:, None]), 1).cpu().numpy()  # [label, detect, iou]
             if x[0].shape[0] > 1:
                 matches = matches[matches[:, 2].argsort()[::-1]]
                 matches = matches[np.unique(matches[:, 1], return_index=True)[1]]
@@ -124,8 +108,7 @@ def run(
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
-        device, pt, jit, engine = next(
-            model.parameters()).device, True, False, False  # get model device, PyTorch model
+        device, pt, jit, engine = next(model.parameters()).device, True, False, False  # get model device, PyTorch model
         half &= device.type != 'cpu'  # half precision only supported on CUDA
         model.half() if half else model.float()
     else:  # called directly
@@ -146,8 +129,7 @@ def run(
             device = model.device
             if not (pt or jit):
                 batch_size = 1  # export.py models default to batch-size 1
-                LOGGER.info(
-                    f'Forcing --batch-size 1 square inference (1,3,{imgsz},{imgsz}) for non-PyTorch models')
+                LOGGER.info(f'Forcing --batch-size 1 square inference (1,3,{imgsz},{imgsz}) for non-PyTorch models')
 
         # Data
         data = check_dataset(data)  # check
@@ -170,17 +152,16 @@ def run(
         model.warmup(imgsz=(1 if pt else batch_size, 3, imgsz, imgsz))  # warmup
         pad, rect = (0.0, False) if task == 'speed' else (0.5, pt)  # square inference for benchmarks
         task = task if task in ('train', 'val', 'test') else 'val'  # path to train/val/test images
-        dataloader = create_dataloader(
-            data[task],
-            imgsz,
-            batch_size,
-            stride,
-            single_cls,
-            pad=pad,
-            rect=rect,
-            workers=workers,
-            min_items=opt.min_items,
-            prefix=colorstr(f'{task}: '))[0]
+        dataloader = create_dataloader(data[task],
+                                       imgsz,
+                                       batch_size,
+                                       stride,
+                                       single_cls,
+                                       pad=pad,
+                                       rect=rect,
+                                       workers=workers,
+                                       min_items=opt.min_items,
+                                       prefix=colorstr(f'{task}: '))[0]
 
     seen = 0
     confusion_matrix = ConfusionMatrix(nc=nc)
@@ -219,14 +200,13 @@ def run(
         targets[:, 2:] *= torch.tensor((width, height, width, height), device=device)  # to pixels
         lb = [targets[targets[:, 0] == i, 1:] for i in range(nb)] if save_hybrid else []  # for autolabelling
         with dt[2]:
-            preds = non_max_suppression(
-                preds,
-                conf_thres,
-                iou_thres,
-                labels=lb,
-                multi_label=True,
-                agnostic=single_cls,
-                max_det=max_det)
+            preds = non_max_suppression(preds,
+                                        conf_thres,
+                                        iou_thres,
+                                        labels=lb,
+                                        multi_label=True,
+                                        agnostic=single_cls,
+                                        max_det=max_det)
 
         # Metrics
         for si, pred in enumerate(preds):
@@ -269,8 +249,7 @@ def run(
         # Plot images
         if plots and batch_i < 3:
             plot_images(im, targets, paths, save_dir / f'val_batch{batch_i}_labels.jpg', names)  # labels
-            plot_images(
-                im, output_to_target(preds), paths, save_dir / f'val_batch{batch_i}_pred.jpg', names)  # pred
+            plot_images(im, output_to_target(preds), paths, save_dir / f'val_batch{batch_i}_pred.jpg', names)  # pred
 
         callbacks.run('on_val_batch_end', batch_i, im, targets, paths, shapes, preds)
 
@@ -306,11 +285,8 @@ def run(
 
     # Save JSON
     if save_json and len(jdict):
-        w = Path(
-            weights[0] if isinstance(weights, list) else weights
-        ).stem if weights is not None else ''  # weights
-        anno_json = str(
-            Path(data.get('path', '../coco')) / 'annotations/instances_val2017.json')  # annotations json
+        w = Path(weights[0] if isinstance(weights, list) else weights).stem if weights is not None else ''  # weights
+        anno_json = str(Path(data.get('path', '../coco')) / 'annotations/instances_val2017.json')  # annotations json
         pred_json = str(save_dir / f"{w}_predictions.json")  # predictions json
         LOGGER.info(f'\nEvaluating pycocotools mAP... saving {pred_json}...')
         with open(pred_json, 'w') as f:
@@ -325,9 +301,7 @@ def run(
             pred = anno.loadRes(pred_json)  # init predictions api
             eval = COCOeval(anno, pred, 'bbox')
             if is_coco:
-                eval.params.imgIds = [
-                    int(Path(x).stem) for x in dataloader.dataset.im_files
-                ]  # image IDs to evaluate
+                eval.params.imgIds = [int(Path(x).stem) for x in dataloader.dataset.im_files]  # image IDs to evaluate
             eval.evaluate()
             eval.accumulate()
             eval.summarize()
@@ -351,21 +325,18 @@ def parse_opt():
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco.yaml', help='dataset.yaml path')
     parser.add_argument('--weights', nargs='+', type=str, default=ROOT / 'yolo.pt', help='model path(s)')
     parser.add_argument('--batch-size', type=int, default=32, help='batch size')
-    parser.add_argument(
-        '--imgsz', '--img', '--img-size', type=int, default=640, help='inference size (pixels)')
+    parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.001, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.7, help='NMS IoU threshold')
     parser.add_argument('--max-det', type=int, default=300, help='maximum detections per image')
     parser.add_argument('--task', default='val', help='train, val, test, speed or study')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument(
-        '--workers', type=int, default=8, help='max dataloader workers (per RANK in DDP mode)')
+    parser.add_argument('--workers', type=int, default=8, help='max dataloader workers (per RANK in DDP mode)')
     parser.add_argument('--single-cls', action='store_true', help='treat as single-class dataset')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--verbose', action='store_true', help='report mAP by class')
     parser.add_argument('--save-txt', action='store_true', help='save results to *.txt')
-    parser.add_argument(
-        '--save-hybrid', action='store_true', help='save label+prediction hybrid results to *.txt')
+    parser.add_argument('--save-hybrid', action='store_true', help='save label+prediction hybrid results to *.txt')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
     parser.add_argument('--save-json', action='store_true', help='save a COCO-JSON results file')
     parser.add_argument('--project', default=ROOT / 'runs/val', help='save to project/name')
@@ -389,9 +360,7 @@ def main(opt):
         if opt.conf_thres > 0.001:  # https://github.com/ultralytics/yolov5/issues/1466
             LOGGER.info(f'WARNING ⚠️ confidence threshold {opt.conf_thres} > 0.001 produces invalid results')
         if opt.save_hybrid:
-            LOGGER.info(
-                'WARNING ⚠️ --save-hybrid will return high mAP from hybrid labels, not from predictions alone'
-            )
+            LOGGER.info('WARNING ⚠️ --save-hybrid will return high mAP from hybrid labels, not from predictions alone')
         run(**vars(opt))
 
     else:

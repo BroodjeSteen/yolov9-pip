@@ -22,35 +22,12 @@ import yaml
 from PIL import ExifTags, Image, ImageOps
 from torch.utils.data import DataLoader, Dataset, dataloader, distributed
 from tqdm import tqdm
-from utils.augmentations import (
-    Albumentations,
-    augment_hsv,
-    classify_albumentations,
-    classify_transforms,
-    copy_paste,
-    letterbox,
-    mixup,
-    random_perspective,
-)
-from utils.general import (
-    DATASETS_DIR,
-    LOGGER,
-    NUM_THREADS,
-    TQDM_BAR_FORMAT,
-    check_dataset,
-    check_requirements,
-    check_yaml,
-    clean_str,
-    cv2,
-    is_colab,
-    is_kaggle,
-    segments2boxes,
-    unzip_file,
-    xyn2xy,
-    xywh2xyxy,
-    xywhn2xyxy,
-    xyxy2xywhn,
-)
+
+from utils.augmentations import (Albumentations, augment_hsv, classify_albumentations, classify_transforms, copy_paste,
+                                 letterbox, mixup, random_perspective)
+from utils.general import (DATASETS_DIR, LOGGER, NUM_THREADS, TQDM_BAR_FORMAT, check_dataset, check_requirements,
+                           check_yaml, clean_str, cv2, is_colab, is_kaggle, segments2boxes, unzip_file, xyn2xy,
+                           xywh2xyxy, xywhn2xyxy, xyxy2xywhn)
 from utils.torch_utils import torch_distributed_zero_first
 
 # Parameters
@@ -103,8 +80,7 @@ def exif_transpose(image):
             5: Image.TRANSPOSE,
             6: Image.ROTATE_270,
             7: Image.TRANSVERSE,
-            8: Image.ROTATE_90
-        }.get(orientation)
+            8: Image.ROTATE_90}.get(orientation)
         if method is not None:
             image = image.transpose(method)
             del exif[0x0112]
@@ -114,30 +90,29 @@ def exif_transpose(image):
 
 def seed_worker(worker_id):
     # Set dataloader worker seed https://pytorch.org/docs/stable/notes/randomness.html#dataloader
-    worker_seed = torch.initial_seed() % 2**32
+    worker_seed = torch.initial_seed() % 2 ** 32
     np.random.seed(worker_seed)
     random.seed(worker_seed)
 
 
-def create_dataloader(
-        path,
-        imgsz,
-        batch_size,
-        stride,
-        single_cls=False,
-        hyp=None,
-        augment=False,
-        cache=False,
-        pad=0.0,
-        rect=False,
-        rank=-1,
-        workers=8,
-        image_weights=False,
-        close_mosaic=False,
-        quad=False,
-        min_items=0,
-        prefix='',
-        shuffle=False):
+def create_dataloader(path,
+                      imgsz,
+                      batch_size,
+                      stride,
+                      single_cls=False,
+                      hyp=None,
+                      augment=False,
+                      cache=False,
+                      pad=0.0,
+                      rect=False,
+                      rank=-1,
+                      workers=8,
+                      image_weights=False,
+                      close_mosaic=False,
+                      quad=False,
+                      min_items=0,
+                      prefix='',
+                      shuffle=False):
     if rect and shuffle:
         LOGGER.warning('WARNING ⚠️ --rect is incompatible with DataLoader shuffle, setting shuffle=False')
         shuffle = False
@@ -159,28 +134,25 @@ def create_dataloader(
 
     batch_size = min(batch_size, len(dataset))
     nd = torch.cuda.device_count()  # number of CUDA devices
-    nw = min([os.cpu_count() // max(nd, 1), batch_size if batch_size > 1 else 0,
-              workers])  # number of workers
+    nw = min([os.cpu_count() // max(nd, 1), batch_size if batch_size > 1 else 0, workers])  # number of workers
     sampler = None if rank == -1 else distributed.DistributedSampler(dataset, shuffle=shuffle)
     #loader = DataLoader if image_weights else InfiniteDataLoader  # only DataLoader allows for attribute updates
     loader = DataLoader if image_weights or close_mosaic else InfiniteDataLoader
     generator = torch.Generator()
     generator.manual_seed(6148914691236517205 + RANK)
-    return loader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle and sampler is None,
-        num_workers=nw,
-        sampler=sampler,
-        pin_memory=PIN_MEMORY,
-        collate_fn=LoadImagesAndLabels.collate_fn4 if quad else LoadImagesAndLabels.collate_fn,
-        worker_init_fn=seed_worker,
-        generator=generator), dataset
+    return loader(dataset,
+                  batch_size=batch_size,
+                  shuffle=shuffle and sampler is None,
+                  num_workers=nw,
+                  sampler=sampler,
+                  pin_memory=PIN_MEMORY,
+                  collate_fn=LoadImagesAndLabels.collate_fn4 if quad else LoadImagesAndLabels.collate_fn,
+                  worker_init_fn=seed_worker,
+                  generator=generator), dataset
 
 
 class InfiniteDataLoader(dataloader.DataLoader):
-    """
-    Dataloader that reuses workers.
+    """ Dataloader that reuses workers
 
     Uses same syntax as vanilla DataLoader
     """
@@ -199,8 +171,7 @@ class InfiniteDataLoader(dataloader.DataLoader):
 
 
 class _RepeatSampler:
-    """
-    Sampler that repeats forever.
+    """ Sampler that repeats forever
 
     Args:
         sampler (Sampler)
@@ -366,8 +337,7 @@ class LoadImages:
 
 class LoadStreams:
     # YOLOv5 streamloader, i.e. `python detect.py --source 'rtsp://example.com/media.mp4'  # RTSP, RTMP, HTTP streams`
-    def __init__(
-            self, sources='streams.txt', img_size=640, stride=32, auto=True, transforms=None, vid_stride=1):
+    def __init__(self, sources='streams.txt', img_size=640, stride=32, auto=True, transforms=None, vid_stride=1):
         torch.backends.cudnn.benchmark = True  # faster for fixed-size inference
         self.mode = 'stream'
         self.img_size = img_size
@@ -380,25 +350,21 @@ class LoadStreams:
         for i, s in enumerate(sources):  # index, source
             # Start thread to read frames from video stream
             st = f'{i + 1}/{n}: {s}... '
-            if urlparse(s).hostname in ('www.youtube.com', 'youtube.com',
-                                        'youtu.be'):  # if source is YouTube video
+            if urlparse(s).hostname in ('www.youtube.com', 'youtube.com', 'youtu.be'):  # if source is YouTube video
                 # YouTube format i.e. 'https://www.youtube.com/watch?v=Zgi9g1ksQHc' or 'https://youtu.be/Zgi9g1ksQHc'
                 check_requirements(('pafy', 'youtube_dl==2020.12.2'))
                 import pafy
                 s = pafy.new(s).getbest(preftype="mp4").url  # YouTube URL
             s = eval(s) if s.isnumeric() else s  # i.e. s = '0' local webcam
             if s == 0:
-                assert not is_colab(
-                ), '--source 0 webcam unsupported on Colab. Rerun command in a local environment.'
-                assert not is_kaggle(
-                ), '--source 0 webcam unsupported on Kaggle. Rerun command in a local environment.'
+                assert not is_colab(), '--source 0 webcam unsupported on Colab. Rerun command in a local environment.'
+                assert not is_kaggle(), '--source 0 webcam unsupported on Kaggle. Rerun command in a local environment.'
             cap = cv2.VideoCapture(s)
             assert cap.isOpened(), f'{st}Failed to open {s}'
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = cap.get(cv2.CAP_PROP_FPS)  # warning: may return 0 or nan
-            self.frames[i] = max(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), 0) or float(
-                'inf')  # infinite stream fallback
+            self.frames[i] = max(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), 0) or float('inf')  # infinite stream fallback
             self.fps[i] = max((fps if math.isfinite(fps) else 0) % 100, 0) or 30  # 30 FPS fallback
 
             _, self.imgs[i] = cap.read()  # guarantee first frame
@@ -413,8 +379,7 @@ class LoadStreams:
         self.auto = auto and self.rect
         self.transforms = transforms  # optional
         if not self.rect:
-            LOGGER.warning(
-                'WARNING ⚠️ Stream shapes differ. For optimal performance supply similarly-shaped streams.')
+            LOGGER.warning('WARNING ⚠️ Stream shapes differ. For optimal performance supply similarly-shaped streams.')
 
     def update(self, i, cap, stream):
         # Read stream `i` frames in daemon thread
@@ -427,8 +392,7 @@ class LoadStreams:
                 if success:
                     self.imgs[i] = im
                 else:
-                    LOGGER.warning(
-                        'WARNING ⚠️ Video stream unresponsive, please check your IP camera connection.')
+                    LOGGER.warning('WARNING ⚠️ Video stream unresponsive, please check your IP camera connection.')
                     self.imgs[i] = np.zeros_like(self.imgs[i])
                     cap.open(stream)  # re-open stream if signal was lost
             time.sleep(0.0)  # wait time
@@ -447,8 +411,7 @@ class LoadStreams:
         if self.transforms:
             im = np.stack([self.transforms(x) for x in im0])  # transforms
         else:
-            im = np.stack([letterbox(x, self.img_size, stride=self.stride, auto=self.auto)[0]
-                           for x in im0])  # resize
+            im = np.stack([letterbox(x, self.img_size, stride=self.stride, auto=self.auto)[0] for x in im0])  # resize
             im = im[..., ::-1].transpose((0, 3, 1, 2))  # BGR to RGB, BHWC to BCHW
             im = np.ascontiguousarray(im)  # contiguous
 
@@ -467,25 +430,22 @@ def img2label_paths(img_paths):
 class LoadImagesAndLabels(Dataset):
     # YOLOv5 train_loader/val_loader, loads images and labels for training and validation
     cache_version = 0.6  # dataset labels *.cache version
-    rand_interp_methods = [
-        cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_LANCZOS4
-    ]
+    rand_interp_methods = [cv2.INTER_NEAREST, cv2.INTER_LINEAR, cv2.INTER_CUBIC, cv2.INTER_AREA, cv2.INTER_LANCZOS4]
 
-    def __init__(
-            self,
-            path,
-            img_size=640,
-            batch_size=16,
-            augment=False,
-            hyp=None,
-            rect=False,
-            image_weights=False,
-            cache_images=False,
-            single_cls=False,
-            stride=32,
-            pad=0.0,
-            min_items=0,
-            prefix=''):
+    def __init__(self,
+                 path,
+                 img_size=640,
+                 batch_size=16,
+                 augment=False,
+                 hyp=None,
+                 rect=False,
+                 image_weights=False,
+                 cache_images=False,
+                 single_cls=False,
+                 stride=32,
+                 pad=0.0,
+                 min_items=0,
+                 prefix=''):
         self.img_size = img_size
         self.augment = augment
         self.hyp = hyp
@@ -508,14 +468,11 @@ class LoadImagesAndLabels(Dataset):
                     with open(p) as t:
                         t = t.read().strip().splitlines()
                         parent = str(p.parent) + os.sep
-                        f += [
-                            x.replace('./', parent, 1) if x.startswith('./') else x for x in t
-                        ]  # to global path
+                        f += [x.replace('./', parent, 1) if x.startswith('./') else x for x in t]  # to global path
                         # f += [p.parent / x.lstrip(os.sep) for x in t]  # to global path (pathlib)
                 else:
                     raise FileNotFoundError(f'{prefix}{p} does not exist')
-            self.im_files = sorted(
-                x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in IMG_FORMATS)
+            self.im_files = sorted(x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in IMG_FORMATS)
             # self.img_files = sorted([x for x in f if x.suffix[1:].lower() in IMG_FORMATS])  # pathlib
             assert self.im_files, f'{prefix}No images found'
         except Exception as e:
@@ -535,9 +492,7 @@ class LoadImagesAndLabels(Dataset):
         nf, nm, ne, nc, n = cache.pop('results')  # found, missing, empty, corrupt, total
         if exists and LOCAL_RANK in {-1, 0}:
             d = f"Scanning {cache_path}... {nf} images, {nm + ne} backgrounds, {nc} corrupt"
-            tqdm(
-                None, desc=prefix + d, total=n, initial=n,
-                bar_format=TQDM_BAR_FORMAT)  # display cache results
+            tqdm(None, desc=prefix + d, total=n, initial=n, bar_format=TQDM_BAR_FORMAT)  # display cache results
             if cache['msgs']:
                 LOGGER.info('\n'.join(cache['msgs']))  # display warnings
         assert nf > 0 or not augment, f'{prefix}No labels found in {cache_path}, can not start training. {HELP_URL}'
@@ -622,8 +577,7 @@ class LoadImagesAndLabels(Dataset):
                 if cache_images == 'disk':
                     b += self.npy_files[i].stat().st_size
                 else:  # 'ram'
-                    self.ims[i], self.im_hw0[i], self.im_hw[
-                        i] = x  # im, hw_orig, hw_resized = load_image(self, i)
+                    self.ims[i], self.im_hw0[i], self.im_hw[i] = x  # im, hw_orig, hw_resized = load_image(self, i)
                     b += self.ims[i].nbytes
                 pbar.desc = f'{prefix}Caching images ({b / gb:.1f}GB {cache_images})'
             pbar.close()
@@ -635,16 +589,14 @@ class LoadImagesAndLabels(Dataset):
         for _ in range(n):
             im = cv2.imread(random.choice(self.im_files))  # sample image
             ratio = self.img_size / max(im.shape[0], im.shape[1])  # max(h, w)  # ratio
-            b += im.nbytes * ratio**2
+            b += im.nbytes * ratio ** 2
         mem_required = b * self.n / n  # GB required to cache dataset into RAM
         mem = psutil.virtual_memory()
-        cache = mem_required * (
-            1 + safety_margin) < mem.available  # to cache or not to cache, that is the question
+        cache = mem_required * (1 + safety_margin) < mem.available  # to cache or not to cache, that is the question
         if not cache:
-            LOGGER.info(
-                f"{prefix}{mem_required / gb:.1f}GB RAM required, "
-                f"{mem.available / gb:.1f}/{mem.total / gb:.1f}GB available, "
-                f"{'caching images ✅' if cache else 'not caching images ⚠️'}")
+            LOGGER.info(f"{prefix}{mem_required / gb:.1f}GB RAM required, "
+                        f"{mem.available / gb:.1f}/{mem.total / gb:.1f}GB available, "
+                        f"{'caching images ✅' if cache else 'not caching images ⚠️'}")
         return cache
 
     def cache_labels(self, path=Path('./labels.cache'), prefix=''):
@@ -653,11 +605,10 @@ class LoadImagesAndLabels(Dataset):
         nm, nf, ne, nc, msgs = 0, 0, 0, 0, []  # number missing, found, empty, corrupt, messages
         desc = f"{prefix}Scanning {path.parent / path.stem}..."
         with Pool(NUM_THREADS) as pool:
-            pbar = tqdm(
-                pool.imap(verify_image_label, zip(self.im_files, self.label_files, repeat(prefix))),
-                desc=desc,
-                total=len(self.im_files),
-                bar_format=TQDM_BAR_FORMAT)
+            pbar = tqdm(pool.imap(verify_image_label, zip(self.im_files, self.label_files, repeat(prefix))),
+                        desc=desc,
+                        total=len(self.im_files),
+                        bar_format=TQDM_BAR_FORMAT)
             for im_file, lb, shape, segments, nm_f, nf_f, ne_f, nc_f, msg in pbar:
                 nm += nm_f
                 nf += nf_f
@@ -683,8 +634,7 @@ class LoadImagesAndLabels(Dataset):
             path.with_suffix('.cache.npy').rename(path)  # remove .npy suffix
             LOGGER.info(f'{prefix}New cache created: {path}')
         except Exception as e:
-            LOGGER.warning(
-                f'{prefix}WARNING ⚠️ Cache directory {path.parent} is not writeable: {e}')  # not writeable
+            LOGGER.warning(f'{prefix}WARNING ⚠️ Cache directory {path.parent} is not writeable: {e}')  # not writeable
         return x
 
     def __len__(self):
@@ -715,25 +665,22 @@ class LoadImagesAndLabels(Dataset):
             img, (h0, w0), (h, w) = self.load_image(index)
 
             # Letterbox
-            shape = self.batch_shapes[
-                self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
+            shape = self.batch_shapes[self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
             img, ratio, pad = letterbox(img, shape, auto=False, scaleup=self.augment)
             shapes = (h0, w0), ((h / h0, w / w0), pad)  # for COCO mAP rescaling
 
             labels = self.labels[index].copy()
             if labels.size:  # normalized xywh to pixel xyxy format
-                labels[:, 1:] = xywhn2xyxy(
-                    labels[:, 1:], ratio[0] * w, ratio[1] * h, padw=pad[0], padh=pad[1])
+                labels[:, 1:] = xywhn2xyxy(labels[:, 1:], ratio[0] * w, ratio[1] * h, padw=pad[0], padh=pad[1])
 
             if self.augment:
-                img, labels = random_perspective(
-                    img,
-                    labels,
-                    degrees=hyp['degrees'],
-                    translate=hyp['translate'],
-                    scale=hyp['scale'],
-                    shear=hyp['shear'],
-                    perspective=hyp['perspective'])
+                img, labels = random_perspective(img,
+                                                 labels,
+                                                 degrees=hyp['degrees'],
+                                                 translate=hyp['translate'],
+                                                 scale=hyp['scale'],
+                                                 shear=hyp['shear'],
+                                                 perspective=hyp['perspective'])
 
         nl = len(labels)  # number of labels
         if nl:
@@ -810,10 +757,8 @@ class LoadImagesAndLabels(Dataset):
             # place img in img4
             if i == 0:  # top left
                 img4 = np.full((s * 2, s * 2, img.shape[2]), 114, dtype=np.uint8)  # base image with 4 tiles
-                x1a, y1a, x2a, y2a = max(xc - w,
-                                         0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (large image)
-                x1b, y1b, x2b, y2b = w - (x2a -
-                                          x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (small image)
+                x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (large image)
+                x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (small image)
             elif i == 1:  # top right
                 x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, s * 2), yc
                 x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
@@ -831,8 +776,7 @@ class LoadImagesAndLabels(Dataset):
             # Labels
             labels, segments = self.labels[index].copy(), self.segments[index].copy()
             if labels.size:
-                labels[:, 1:] = xywhn2xyxy(
-                    labels[:, 1:], w, h, padw, padh)  # normalized xywh to pixel xyxy format
+                labels[:, 1:] = xywhn2xyxy(labels[:, 1:], w, h, padw, padh)  # normalized xywh to pixel xyxy format
                 segments = [xyn2xy(x, w, h, padw, padh) for x in segments]
             labels4.append(labels)
             segments4.extend(segments)
@@ -845,16 +789,15 @@ class LoadImagesAndLabels(Dataset):
 
         # Augment
         img4, labels4, segments4 = copy_paste(img4, labels4, segments4, p=self.hyp['copy_paste'])
-        img4, labels4 = random_perspective(
-            img4,
-            labels4,
-            segments4,
-            degrees=self.hyp['degrees'],
-            translate=self.hyp['translate'],
-            scale=self.hyp['scale'],
-            shear=self.hyp['shear'],
-            perspective=self.hyp['perspective'],
-            border=self.mosaic_border)  # border to remove
+        img4, labels4 = random_perspective(img4,
+                                           labels4,
+                                           segments4,
+                                           degrees=self.hyp['degrees'],
+                                           translate=self.hyp['translate'],
+                                           scale=self.hyp['scale'],
+                                           shear=self.hyp['shear'],
+                                           perspective=self.hyp['perspective'],
+                                           border=self.mosaic_border)  # border to remove
 
         return img4, labels4
 
@@ -897,8 +840,7 @@ class LoadImagesAndLabels(Dataset):
             # Labels
             labels, segments = self.labels[index].copy(), self.segments[index].copy()
             if labels.size:
-                labels[:, 1:] = xywhn2xyxy(
-                    labels[:, 1:], w, h, padx, pady)  # normalized xywh to pixel xyxy format
+                labels[:, 1:] = xywhn2xyxy(labels[:, 1:], w, h, padx, pady)  # normalized xywh to pixel xyxy format
                 segments = [xyn2xy(x, w, h, padx, pady) for x in segments]
             labels9.append(labels)
             segments9.extend(segments)
@@ -924,16 +866,15 @@ class LoadImagesAndLabels(Dataset):
 
         # Augment
         img9, labels9, segments9 = copy_paste(img9, labels9, segments9, p=self.hyp['copy_paste'])
-        img9, labels9 = random_perspective(
-            img9,
-            labels9,
-            segments9,
-            degrees=self.hyp['degrees'],
-            translate=self.hyp['translate'],
-            scale=self.hyp['scale'],
-            shear=self.hyp['shear'],
-            perspective=self.hyp['perspective'],
-            border=self.mosaic_border)  # border to remove
+        img9, labels9 = random_perspective(img9,
+                                           labels9,
+                                           segments9,
+                                           degrees=self.hyp['degrees'],
+                                           translate=self.hyp['translate'],
+                                           scale=self.hyp['scale'],
+                                           shear=self.hyp['shear'],
+                                           perspective=self.hyp['perspective'],
+                                           border=self.mosaic_border)  # border to remove
 
         return img9, labels9
 
@@ -956,14 +897,12 @@ class LoadImagesAndLabels(Dataset):
         for i in range(n):  # zidane torch.zeros(16,3,720,1280)  # BCHW
             i *= 4
             if random.random() < 0.5:
-                im1 = F.interpolate(
-                    im[i].unsqueeze(0).float(), scale_factor=2.0, mode='bilinear',
-                    align_corners=False)[0].type(im[i].type())
+                im1 = F.interpolate(im[i].unsqueeze(0).float(), scale_factor=2.0, mode='bilinear',
+                                    align_corners=False)[0].type(im[i].type())
                 lb = label[i]
             else:
                 im1 = torch.cat((torch.cat((im[i], im[i + 1]), 1), torch.cat((im[i + 2], im[i + 3]), 1)), 2)
-                lb = torch.cat(
-                    (label[i], label[i + 1] + ho, label[i + 2] + wo, label[i + 3] + ho + wo), 0) * s
+                lb = torch.cat((label[i], label[i + 1] + ho, label[i + 2] + wo, label[i + 3] + ho + wo), 0) * s
             im4.append(im1)
             label4.append(lb)
 
@@ -1000,8 +939,7 @@ def extract_boxes(path=DATASETS_DIR / 'coco128'):  # from utils.dataloaders impo
             lb_file = Path(img2label_paths([str(im_file)])[0])
             if Path(lb_file).exists():
                 with open(lb_file) as f:
-                    lb = np.array([x.split() for x in f.read().strip().splitlines()],
-                                  dtype=np.float32)  # labels
+                    lb = np.array([x.split() for x in f.read().strip().splitlines()], dtype=np.float32)  # labels
 
                 for j, x in enumerate(lb):
                     c = int(x[0])  # class
@@ -1048,8 +986,7 @@ def autosplit(path=DATASETS_DIR / 'coco128/images', weights=(0.9, 0.1, 0.0), ann
 def verify_image_label(args):
     # Verify one image-label pair
     im_file, lb_file, prefix = args
-    nm, nf, ne, nc, msg, segments = 0, 0, 0, 0, '', [
-    ]  # number (missing, found, empty, corrupt), message, segments
+    nm, nf, ne, nc, msg, segments = 0, 0, 0, 0, '', []  # number (missing, found, empty, corrupt), message, segments
     try:
         # verify images
         im = Image.open(im_file)
@@ -1061,8 +998,7 @@ def verify_image_label(args):
             with open(im_file, 'rb') as f:
                 f.seek(-2, 2)
                 if f.read() != b'\xff\xd9':  # corrupt JPEG
-                    ImageOps.exif_transpose(Image.open(im_file)).save(
-                        im_file, 'JPEG', subsampling=0, quality=100)
+                    ImageOps.exif_transpose(Image.open(im_file)).save(im_file, 'JPEG', subsampling=0, quality=100)
                     msg = f'{prefix}WARNING ⚠️ {im_file}: corrupt JPEG restored and saved'
 
         # verify labels
@@ -1079,8 +1015,7 @@ def verify_image_label(args):
             if nl:
                 assert lb.shape[1] == 5, f'labels require 5 columns, {lb.shape[1]} columns detected'
                 assert (lb >= 0).all(), f'negative label values {lb[lb < 0]}'
-                assert (lb[:, 1:]
-                        <= 1).all(), f'non-normalized or out of bounds coordinates {lb[:, 1:][lb[:, 1:] > 1]}'
+                assert (lb[:, 1:] <= 1).all(), f'non-normalized or out of bounds coordinates {lb[:, 1:][lb[:, 1:] > 1]}'
                 _, i = np.unique(lb, axis=0, return_index=True)
                 if len(i) < nl:  # duplicate row check
                     lb = lb[i]  # remove duplicates
@@ -1101,8 +1036,7 @@ def verify_image_label(args):
 
 
 class HUBDatasetStats():
-    """
-    Class for generating HUB dataset JSON and `-hub` dataset directory.
+    """ Class for generating HUB dataset JSON and `-hub` dataset directory
 
     Arguments
         path:           Path to data.yaml or data.zip (with data.yaml inside data.zip)
@@ -1137,8 +1071,7 @@ class HUBDatasetStats():
     @staticmethod
     def _find_yaml(dir):
         # Return data.yaml file
-        files = list(dir.glob('*.yaml')) or list(
-            dir.rglob('*.yaml'))  # try root level first and then recursive
+        files = list(dir.glob('*.yaml')) or list(dir.rglob('*.yaml'))  # try root level first and then recursive
         assert files, f'No *.yaml file found in {dir}'
         if len(files) > 1:
             files = [f for f in files if f.stem == dir.stem]  # prefer *.yaml files that match dir name
@@ -1153,8 +1086,7 @@ class HUBDatasetStats():
         assert Path(path).is_file(), f'Error unzipping {path}, file not found'
         unzip_file(path, path=path.parent)
         dir = path.with_suffix('')  # dataset directory == zip name
-        assert dir.is_dir(
-        ), f'Error unzipping {path}, {dir} not found. path/to/abc.zip MUST unzip to path/to/abc/'
+        assert dir.is_dir(), f'Error unzipping {path}, {dir} not found. path/to/abc.zip MUST unzip to path/to/abc/'
         return True, str(dir), self._find_yaml(dir)  # zipped, data_dir, yaml_path
 
     def _hub_ops(self, f, max_dim=1920):
@@ -1188,22 +1120,17 @@ class HUBDatasetStats():
             dataset = LoadImagesAndLabels(self.data[split])  # load dataset
             x = np.array([
                 np.bincount(label[:, 0].astype(int), minlength=self.data['nc'])
-                for label in tqdm(dataset.labels, total=dataset.n, desc='Statistics')
-            ])  # shape(128x80)
+                for label in tqdm(dataset.labels, total=dataset.n, desc='Statistics')])  # shape(128x80)
             self.stats[split] = {
                 'instance_stats': {
                     'total': int(x.sum()),
-                    'per_class': x.sum(0).tolist()
-                },
+                    'per_class': x.sum(0).tolist()},
                 'image_stats': {
                     'total': dataset.n,
                     'unlabelled': int(np.all(x == 0, 1).sum()),
-                    'per_class': (x > 0).sum(0).tolist()
-                },
+                    'per_class': (x > 0).sum(0).tolist()},
                 'labels': [{
-                    str(Path(k).name): _round(v.tolist())
-                } for k, v in zip(dataset.im_files, dataset.labels)]
-            }
+                    str(Path(k).name): _round(v.tolist())} for k, v in zip(dataset.im_files, dataset.labels)]}
 
         # Save, print and return
         if save:
@@ -1222,8 +1149,7 @@ class HUBDatasetStats():
                 continue
             dataset = LoadImagesAndLabels(self.data[split])  # load dataset
             desc = f'{split} images'
-            for _ in tqdm(ThreadPool(NUM_THREADS).imap(self._hub_ops, dataset.im_files), total=dataset.n,
-                          desc=desc):
+            for _ in tqdm(ThreadPool(NUM_THREADS).imap(self._hub_ops, dataset.im_files), total=dataset.n, desc=desc):
                 pass
         print(f'Done. All images saved to {self.im_dir}')
         return self.im_dir
@@ -1233,7 +1159,6 @@ class HUBDatasetStats():
 class ClassificationDataset(torchvision.datasets.ImageFolder):
     """
     YOLOv5 Classification Dataset.
-
     Arguments
         root:  Dataset path
         transform:  torchvision transforms, used by default
@@ -1246,9 +1171,7 @@ class ClassificationDataset(torchvision.datasets.ImageFolder):
         self.album_transforms = classify_albumentations(augment, imgsz) if augment else None
         self.cache_ram = cache is True or cache == 'ram'
         self.cache_disk = cache == 'disk'
-        self.samples = [
-            list(x) + [Path(x[0]).with_suffix('.npy'), None] for x in self.samples
-        ]  # file, index, npy, im
+        self.samples = [list(x) + [Path(x[0]).with_suffix('.npy'), None] for x in self.samples]  # file, index, npy, im
 
     def __getitem__(self, i):
         f, j, fn, im = self.samples[i]  # filename, index, filename.with_suffix('.npy'), image
@@ -1267,8 +1190,14 @@ class ClassificationDataset(torchvision.datasets.ImageFolder):
         return sample, j
 
 
-def create_classification_dataloader(
-        path, imgsz=224, batch_size=16, augment=True, cache=False, rank=-1, workers=8, shuffle=True):
+def create_classification_dataloader(path,
+                                     imgsz=224,
+                                     batch_size=16,
+                                     augment=True,
+                                     cache=False,
+                                     rank=-1,
+                                     workers=8,
+                                     shuffle=True):
     # Returns Dataloader object to be used with YOLOv5 Classifier
     with torch_distributed_zero_first(rank):  # init dataset *.cache only once if DDP
         dataset = ClassificationDataset(root=path, imgsz=imgsz, augment=augment, cache=cache)
@@ -1278,12 +1207,11 @@ def create_classification_dataloader(
     sampler = None if rank == -1 else distributed.DistributedSampler(dataset, shuffle=shuffle)
     generator = torch.Generator()
     generator.manual_seed(6148914691236517205 + RANK)
-    return InfiniteDataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle and sampler is None,
-        num_workers=nw,
-        sampler=sampler,
-        pin_memory=PIN_MEMORY,
-        worker_init_fn=seed_worker,
-        generator=generator)  # or DataLoader(persistent_workers=True)
+    return InfiniteDataLoader(dataset,
+                              batch_size=batch_size,
+                              shuffle=shuffle and sampler is None,
+                              num_workers=nw,
+                              sampler=sampler,
+                              pin_memory=PIN_MEMORY,
+                              worker_init_fn=seed_worker,
+                              generator=generator)  # or DataLoader(persistent_workers=True)

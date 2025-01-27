@@ -20,17 +20,16 @@ def mixup(im, labels, segments, seg_cls, semantic_masks, im2, labels2, segments2
     return im, labels, segments, seg_cls, semantic_masks
 
 
-def random_perspective(
-    im,
-    targets=(),
-    segments=(),
-    semantic_masks=(),
-    degrees=10,
-    translate=.1,
-    scale=.1,
-    shear=10,
-    perspective=0.0,
-    border=(0, 0)):
+def random_perspective(im,
+                       targets=(),
+                       segments=(),
+                       semantic_masks = (),
+                       degrees=10,
+                       translate=.1,
+                       scale=.1,
+                       shear=10,
+                       perspective=0.0,
+                       border=(0, 0)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # targets = [cls, xyxy]
 
@@ -110,8 +109,7 @@ def random_perspective(
             xy_s = np.ones((len(semantic_mask), 3))
             xy_s[:, :2] = semantic_mask
             xy_s = xy_s @ M.T  # transform
-            xy_s = (
-                xy_s[:, :2] / xy_s[:, 2:3] if perspective else xy_s[:, :2])  # perspective rescale or affine
+            xy_s = (xy_s[:, :2] / xy_s[:, 2:3] if perspective else xy_s[:, :2])  # perspective rescale or affine
 
             new_semantic_masks.append(xy_s)
 
@@ -125,8 +123,7 @@ def random_perspective(
     return im, targets, new_segments, new_semantic_masks
 
 
-def letterbox(
-        im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleup=True, stride=32):
+def letterbox(im, new_shape=(640, 640), color=(114, 114, 114), auto=True, scaleFill=False, scaleup=True, stride=32):
     # Resize and pad image while meeting stride-multiple constraints
     shape = im.shape[:2]  # current shape [height, width]
     if isinstance(new_shape, int):
