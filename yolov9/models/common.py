@@ -20,9 +20,9 @@ import torch.nn as nn
 from IPython.display import display
 from PIL import Image
 from torch.cuda import amp
-from utils import TryExcept
-from utils.dataloaders import exif_transpose, letterbox
-from utils.general import (
+from yolov9.utils import TryExcept
+from yolov9.utils.dataloaders import exif_transpose, letterbox
+from yolov9.utils.general import (
     LOGGER,
     ROOT,
     Profile,
@@ -39,8 +39,8 @@ from utils.general import (
     xyxy2xywh,
     yaml_load,
 )
-from utils.plots import Annotator, colors, save_one_box
-from utils.torch_utils import copy_attr, smart_inference_mode
+from yolov9.utils.plots import Annotator, colors, save_one_box
+from yolov9.utils.torch_utils import copy_attr, smart_inference_mode
 
 
 def autopad(k, p=None, d=1):  # kernel, padding, dilation
@@ -762,7 +762,7 @@ class DetectMultiBackend(nn.Module):
         #   TensorFlow Lite:                *.tflite
         #   TensorFlow Edge TPU:            *_edgetpu.tflite
         #   PaddlePaddle:                   *_paddle_model
-        from models.experimental import attempt_download, attempt_load  # scoped to avoid circular import
+        from yolov9.models.experimental import attempt_download, attempt_load  # scoped to avoid circular import
 
         super().__init__()
         w = str(weights[0] if isinstance(weights, list) else weights)
@@ -932,7 +932,7 @@ class DetectMultiBackend(nn.Module):
         elif triton:  # NVIDIA Triton Inference Server
             LOGGER.info(f'Using {w} as Triton Inference Server...')
             check_requirements('tritonclient[all]')
-            from utils.triton import TritonRemoteModel
+            from yolov9.utils.triton import TritonRemoteModel
             model = TritonRemoteModel(url=w)
             nhwc = model.runtime.startswith("tensorflow")
         else:
@@ -1045,8 +1045,8 @@ class DetectMultiBackend(nn.Module):
     def _model_type(p='path/to/model.pt'):
         # Return model type from model path, i.e. path='path/to/model.onnx' -> type=onnx
         # types = [pt, jit, onnx, xml, engine, coreml, saved_model, pb, tflite, edgetpu, tfjs, paddle]
-        from export import export_formats
-        from utils.downloads import is_url
+        from yolov9.export import export_formats
+        from yolov9.utils.downloads import is_url
         sf = list(export_formats().Suffix)  # export suffixes
         if not is_url(p, check=False):
             check_suffix(p, sf)  # checks
@@ -1093,7 +1093,7 @@ class AutoShape(nn.Module):
     def _apply(self, fn):
         # Apply to(), cpu(), cuda(), half() to model tensors that are not parameters or registered buffers
         self = super()._apply(fn)
-        from models.yolo import Detect, Segment
+        from yolov9.models.yolo import Detect, Segment
         if self.pt:
             m = self.model.model.model[-1] if self.dmb else self.model.model[-1]  # Detect()
             if isinstance(m, (Detect, Segment)):
